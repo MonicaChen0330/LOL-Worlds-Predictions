@@ -4,8 +4,8 @@
 ### Crawler
 1. **GetGameID.py**: Fetch match IDs for the specified league and year.
 2. **GetGameStats.py**: Fetch detailed game statistics for each match.
-3. **MatchStatsCleaning.py**: Clean and process the raw game statistics data into CSV format.
-4. **mergeCSV.py**: Combine multiple CSV files into a single dataset for model training or testing.
+3. **MatchStatsToCSV.py**: Clean and process the raw game statistics data into CSV format.
+4. **MergeCSV.py**: Combine multiple CSV files into a single dataset for model training or testing.
 
 ## Require Dependencies
 Before running the scripts, install the required libraries:
@@ -48,29 +48,31 @@ Fetch detailed game statistics, including team names, scores, and player statist
    ./GameID/matches_{league_id}_{year}_all_months.csv
    ```
 
-#### **3. Clean Game Statistics** (`MatchStatsCleaning.py`)
+#### **3. Clean Game Statistics** (`MatchStatsToCSV.py`)
 Process and clean the fetched JSON files into a structured CSV format.
 #### **Usage:**
 1. Run the script:
    ```bash
-   python MatchStatsCleaning.py
+   python MatchStatsToCSV.py
    ```
 2. Input the required parameters:
    - `leagueID`: League you want to clean.
    - `year`: Year of the tournament.
+3. Input the target directory name here. All data in this derectory may be combine in a single CSV file by step4.
+
 #### **Input:**
 - JSON files generated in:
    ```plaintext
    ./MatchStats/{league_name}_{year}/
    ```
 
-#### **4. Merge CSV Files** (`mergeCSV.py`)
+#### **4. Merge CSV Files** (`MergeCSV.py`)
 Combine multiple cleaned CSV files into a single dataset, suitable for training or testing machine learning models.
 #### **Usage:**
 1. Place all the CSV files you want to merge into the same folder.
 2. Run the script:
    ```bash
-   python mergeCSV.py
+   python MergeCSV.py
    ```
 3. Input the required parameters:
    - Specify the **input folder** containing the CSV files.
@@ -84,7 +86,7 @@ Combine multiple cleaned CSV files into a single dataset, suitable for training 
 ## **Directory Structure**
 
 ```plaintext
-Project Root
+Project Root/LOL_gamestats_crawler
 │
 ├── GameID/                 # Match ID CSV files
 │   ├── matches_99_2024_all_months.csv
@@ -96,12 +98,15 @@ Project Root
 │   └── ...
 │
 ├── StatsCSV/               # Cleaned and structured CSV files
-│   ├── LCK_2024.csv
-│   ├── LPL_2024.csv
+│   ├── train/  
+│   │    ├── LCK_2024.csv
+│   │    ├── LPL_2024.csv
+│   │    └── ...
+│   ├── test/
 │   └── ...
 │
 ├── GetGameID.py            # Fetch match IDs
 ├── GetGameStats.py         # Fetch match statistics
-├── MatchStatsCleaning.py   # Clean match data
-├── mergeCSV.py             # Combine CSV files
+├── MatchStatsToCSV.py   # Clean match data
+├── MergeCSV.py             # Combine CSV files
 └── README.md               # Documentation (this file)
