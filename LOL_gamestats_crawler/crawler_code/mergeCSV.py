@@ -4,7 +4,7 @@ import pandas as pd
 # Define the input folder and output file
 input_folder = input('Enter Input Folder Path:')
 output_file = input("Enter Output Filename:")
-os.makedirs(output_file, exist_ok=True) #Ensure the output file exist
+output_path = output_file + '.csv'
 
 # Initialize an empty list to store data from all CSV files
 all_data = []
@@ -32,8 +32,8 @@ if all_data:
     
     # Save the combined DataFrame to the output CSV file
     try:
-        combined_df.to_csv(output_file, index=False)
-        print(f"All CSV files combined and saved to {output_file}.")
+        combined_df.to_csv(output_path, index=False)
+        print(f"All CSV files combined and saved to {output_path}.")
     except Exception as e:
         print(f"Failed to save combined CSV file: {e}")
 else:

@@ -7,9 +7,11 @@ league = input("Enter League ID (Worlds, LPL, LCK, MSI):").strip()
 year = input("Enter the year (e.g., 2024): ").strip()
 
 # Define input and output paths
+output_dir = f'./StatsCSV/Training' #Set the directory name here
+os.makedirs(output_dir, exist_ok=True) #Ensure the output file exist
 input_folder = f'./MatchStats/{league}_{year}'
-output_file = f'./StatsCSV_{year}/{league}_{year}.csv'
-os.makedirs(output_file, exist_ok=True) #Ensure the output file exist
+output_file = f'{output_dir}/{league}_{year}.csv'
+
 
 # Initialize an empty list to store processed data
 all_data = []
@@ -25,6 +27,9 @@ for filename in os.listdir(input_folder):
         
         # Extract key data
         game_data = data['data']['gameByMatch']
+        if not game_data:  # Skip the file if gameByMatch is null
+                print(f"Skipping file {filename}: 'gameByMatch' data is null.")
+                continue
         teams = game_data['teams']
         players = game_data['players']
         object_kills = game_data['objectKills']
