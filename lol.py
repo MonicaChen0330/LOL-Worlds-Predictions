@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 
 
-from model import FCNN, CNN
+from Model import FCNN, CNN
 
 # 讀取訓練與測試數據
 train_file_path = 'train_lol_cleaned.csv'
