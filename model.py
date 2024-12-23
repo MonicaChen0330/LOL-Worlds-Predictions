@@ -12,8 +12,8 @@ class BaseModel(nn.Module):
 class FCNN(BaseModel):
     def __init__(self, input_size):
         super(FCNN, self).__init__()
-        self.fc1 = nn.Linear(input_size, 128)
-        self.fc2 = nn.Linear(128, 64)
+        self.fc1 = nn.Linear(input_size, 64)
+        self.fc2 = nn.Linear(64, 64)
         self.fc3 = nn.Linear(64, 32)
         self.output_wins = nn.Linear(32, 1)  # 單一輸出
         self.output_firstInhibitorKill = nn.Linear(32, 1)
@@ -26,12 +26,11 @@ class FCNN(BaseModel):
     def forward(self, x):
         x = self.fc1(x)
         x = self.relu(x)
-        x = self.dropout(x)
         x = self.fc2(x)
         x = self.relu(x)
-        x = self.dropout(x)
         x = self.fc3(x)
         x = self.relu(x)
+        x = self.dropout(x)
         # 分別輸出三個結果
         wins = self.output_wins(x)
         wins = self.sigmoid(wins)
@@ -80,13 +79,52 @@ class CNN(BaseModel):
         x = F.relu(self.fc3(x))
         
         # 分別輸出三個結果
-        wins = self.output_wins(x)
-        wins = self.sigmoid(wins)  # 確保輸出在 [0, 1] 範圍內
+        wins = self.sigmoid(self.output_wins(x))
         
-        firstInhibitor = self.output_firstInhibitorKill(x)
-        firstInhibitor = self.sigmoid(firstInhibitor)  # 輸出概率值
+        firstInhibitor = self.sigmoid(self.output_firstInhibitorKill(x))
         
-        firstTower = self.output_firstTowerKill(x)
-        firstTower = self.sigmoid(firstTower)  # 輸出概率值
+        firstTower = self.sigmoid(self.output_firstTowerKill(x))
         
+        return wins, firstInhibitor, firstTower
+    
+class ResidualBlock(nn.Module):
+    def __init__(self, input_size):
+        super(ResidualBlock, self).__init__()
+        self.fc1 = nn.Linear(input_size, input_size)
+        self.fc2 = nn.Linear(input_size, input_size)
+        self.relu = nn.ReLU()
+
+    def forward(self, x):
+        residual = x
+        x = self.fc1(x)
+        x = self.relu(x)
+        x = self.fc2(x)
+        return self.relu(x + residual)
+
+class ResNetModel(BaseModel):
+    def __init__(self, input_size, num_blocks):
+        """
+        Args:
+            input_size: 輸入特徵的維度
+            num_blocks: ResNet 模塊的數量
+        """
+        super(ResNetModel, self).__init__()
+        self.input_layer = nn.Linear(input_size, 128)
+        self.res_blocks = nn.Sequential(*[ResidualBlock(128) for _ in range(num_blocks)])
+        self.fc1 = nn.Linear(128, 64)
+        self.output_wins = nn.Linear(64, 1)
+        self.output_firstInhibitorKill = nn.Linear(64, 1)
+        self.output_firstTowerKill = nn.Linear(64, 1)
+        self.relu = nn.ReLU()
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        x = self.input_layer(x)
+        x = self.relu(x)
+        x = self.res_blocks(x)
+        x = self.fc1(x)
+        x = self.relu(x)
+        wins = self.sigmoid(self.output_wins(x))
+        firstInhibitor = self.sigmoid(self.output_firstInhibitorKill(x))
+        firstTower = self.sigmoid(self.output_firstTowerKill(x))
         return wins, firstInhibitor, firstTower
