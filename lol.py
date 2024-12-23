@@ -7,11 +7,9 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import roc_auc_score, roc_curve
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
+from prediction import predictor
 
-
-from model import FCNN, CNN, ResNetModel
-
-BATCH_SIZE = 32
+from model import FCNN, CNN
 
 # 讀取訓練與測試數據
 train_file_path = 'train_lol_cleaned.csv'
@@ -79,12 +77,14 @@ y_test_firstTower_tensor = torch.tensor(y_test["A_firstTowerKill"].values, dtype
 
 # 初始化模型、損失函數和優化器
 input_size = X_train_tensor.shape[1]
-model = FCNN(input_size)
+model = CNN(input_size)
 criterion = nn.BCELoss()  # 二元交叉熵損失
 optimizer = optim.Adam(model.parameters(), lr=0.0001)
 
 # 訓練模型
 epochs = 30
+batch_size = 32
+
 class MultiTargetDataset(Dataset):
     def __init__(self, X, y_wins, y_firstInhibitor, y_firstTower):
         self.X = X
@@ -99,7 +99,7 @@ class MultiTargetDataset(Dataset):
         return self.X[idx], self.y_wins[idx], self.y_firstInhibitor[idx], self.y_firstTower[idx]
 
 train_dataset = MultiTargetDataset(X_train_tensor, y_train_wins_tensor, y_train_firstInhibitor_tensor, y_train_firstInhibitor_tensor)
-train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
 for epoch in range(epochs):
     model.train()
@@ -123,7 +123,7 @@ for epoch in range(epochs):
 
 # 測試模型
 model.eval()
-with torch.no_grad():
+'''with torch.no_grad():
     wins, firstInhibitor, firstTower = model(X_test_tensor)
     A_firstInhibitorKill = (firstInhibitor > 0.5).float()
     A_firstTowerKill = (firstTower > 0.5).float()
@@ -142,16 +142,25 @@ with torch.no_grad():
         print(f"{target} roc_auc_score: {roc_auc_score(y_test[target], predictions[target])}")
     
     # draw all target roc_auc_score pyplot in one figure
-    fig = plt.figure(figsize=(15, 5))
+    fig = plt.figure(figsize=(15, 10))
     for idx, target in enumerate(target_list):
-        if target.startswith("B"):
-            break;
         fpr, tpr, _ = roc_curve(y_test[target], predictions[target])
-        ax = fig.add_subplot(1, 3, idx+1)
+        ax = fig.add_subplot(2, 3, idx+1)
         ax.plot(fpr, tpr, label=f"{target} ROC curve (area = {roc_auc_score(y_test[target], predictions[target]):.2f})")
         ax.set_xlabel('False positive rate')
         ax.set_ylabel('True positive rate')
         ax.set_title(f'{target} ROC curve')
         ax.legend(loc='best')
     plt.tight_layout()
-    plt.show()
+    plt.show()'''
+
+# 去掉目標欄位，並標準化數據
+X_test_features = test_data.drop(columns=target_list + ["game_date", "A_teamname", "B_teamname"])
+X_test_scaled, _ = preprocess_with_scaler(X_test_features, scaler=scaler)
+
+# 確保傳遞完整的測試數據
+test_data_scaled = test_data.copy()
+test_data_scaled[X_test_features.columns] = X_test_scaled[X_test_features.columns]
+
+# 呼叫 predictor 函數，傳遞完整的測試數據
+predictor(test_data_scaled, model)
