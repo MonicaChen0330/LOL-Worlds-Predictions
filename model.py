@@ -12,8 +12,8 @@ class BaseModel(nn.Module):
 class FCNN(BaseModel):
     def __init__(self, input_size):
         super(FCNN, self).__init__()
-        self.fc1 = nn.Linear(input_size, 128)
-        self.fc2 = nn.Linear(128, 64)
+        self.fc1 = nn.Linear(input_size, 64)
+        self.fc2 = nn.Linear(64, 64)
         self.fc3 = nn.Linear(64, 32)
         self.output_wins = nn.Linear(32, 1)  # 單一輸出
         self.output_firstInhibitorKill = nn.Linear(32, 1)
@@ -26,12 +26,11 @@ class FCNN(BaseModel):
     def forward(self, x):
         x = self.fc1(x)
         x = self.relu(x)
-        x = self.dropout(x)
         x = self.fc2(x)
         x = self.relu(x)
-        x = self.dropout(x)
         x = self.fc3(x)
         x = self.relu(x)
+        x = self.dropout(x)
         # 分別輸出三個結果
         wins = self.output_wins(x)
         wins = self.sigmoid(wins)
