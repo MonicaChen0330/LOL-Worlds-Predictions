@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 
 
-from Model import FCNN, CNN, ResNetModel
+from model import FCNN, CNN, ResNetModel
 
 BATCH_SIZE = 32
 
