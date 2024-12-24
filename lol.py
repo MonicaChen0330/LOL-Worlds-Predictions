@@ -7,7 +7,9 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import roc_auc_score, roc_curve
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
-from prediction import predictor
+from prediction import predictor, quarterfinal_predictor
+import networkx as nx
+import matplotlib.animation as animation
 
 from model import FCNN, CNN, ResNetModel
 
@@ -163,4 +165,93 @@ test_data_scaled = test_data.copy()
 test_data_scaled[X_test_features.columns] = X_test_scaled[X_test_features.columns]
 
 # 呼叫 predictor 函數，傳遞完整的測試數據
-predictor(test_data_scaled, model)
+def draw_tournament_hierarchy(quarterfinal_matches, quarter_winners, semifinal_winners, final_winner):
+    """
+    繪製錦標賽圖表
+    :param matches: 比賽的列表，每場比賽是 (隊伍A, 隊伍B)
+    :param winners: 對應的勝者列表，按比賽順序排列
+    :param stage: 比賽階段名稱 (如 "Quarterfinals", "Semifinals", "Finals")
+    """
+    G = nx.DiGraph()
+
+    # Ensure inputs are lists or empty lists
+    quarter_winners = quarter_winners or []
+    semifinal_winners = semifinal_winners or []
+    final_winner = final_winner or "TBD"
+
+    # Adding quarterfinal matches
+    for i, match in enumerate(quarterfinal_matches):
+        G.add_node(f"Q{i+1}A", label=match[0])
+        G.add_node(f"Q{i+1}B", label=match[1])
+        winner_label = quarter_winners[i] if i < len(quarter_winners) else "TBD"
+        G.add_node(f"Q{i+1}W", label=winner_label)
+        G.add_edge(f"Q{i+1}A", f"Q{i+1}W")
+        G.add_edge(f"Q{i+1}B", f"Q{i+1}W")
+
+    # Adding semifinal matches
+    for i in range(2):
+        semifinal_winner_label = semifinal_winners[i] if i < len(semifinal_winners) else "TBD"
+        G.add_node(f"S{i+1}W", label=semifinal_winner_label)
+        G.add_edge(f"Q{2*i+1}W", f"S{i+1}W")
+        G.add_edge(f"Q{2*i+2}W", f"S{i+1}W")
+    # Adding final match
+    final_winner_label = final_winner if final_winner else "TBD"
+    G.add_node("F1W", label=final_winner_label)
+    G.add_edge("S1W", "F1W")
+    G.add_edge("S2W", "F1W")
+
+    pos = {f"Q{i+1}A": (0, -i * 2) for i in range(4)}
+    pos.update({f"Q{i+1}B": (0, -i * 2 - 1) for i in range(4)})
+    pos.update({f"Q{i+1}W": (1, -i * 2 - 0.5) for i in range(4)})
+
+    pos.update({f"S{i+1}W": (2, -i * 4 - 1) for i in range(2)})
+    pos.update({"F1W": (3, -2)})
+
+    labels = nx.get_node_attributes(G, "label")
+    nx.draw(G, pos, labels=labels, with_labels=True, node_size=2000, node_color="skyblue", font_size=10, font_color="black")
+
+    plt.title("Tournament Hierarchy")
+    plt.show()
+
+#predictor(test_data_scaled, model)
+# 定義八強比賽列表
+quarterfinal_matches = [
+    ("LNG", "WB"),
+    ("HLE", "BLG"),
+    ("TES", "T1"),
+    ("GEN", "FLY")
+]
+print(f"八強比賽列表：{quarterfinal_matches}")
+(quarter_match_winner,
+ quarter_first_inhibitor,
+ quarter_first_tower) = quarterfinal_predictor(test_data_scaled,
+                                               model, 
+                                               quarterfinal_matches,
+                                               3)
+print(f"八強比賽預測結果：{quarter_match_winner}")
+draw_tournament_hierarchy(quarterfinal_matches, quarter_match_winner, [], "")
+
+semifinal_matches = [
+    (quarter_match_winner[0], quarter_match_winner[1]),
+    (quarter_match_winner[2], quarter_match_winner[3])
+]
+(semi_match_winner,
+ semi_first_inhibitor,
+ semi_first_tower) = quarterfinal_predictor(test_data_scaled,
+                                            model,
+                                            semifinal_matches,
+                                            2)
+print(f"四強比賽預測結果：{semi_match_winner}")
+draw_tournament_hierarchy(quarterfinal_matches, quarter_match_winner, semi_match_winner, "")
+
+final_matches = [
+    (semi_match_winner[0], semi_match_winner[1])
+]
+(final_match_winner,
+ final_first_inhibitor,
+ final_first_tower) = quarterfinal_predictor(test_data_scaled,
+                                             model,
+                                             final_matches,
+                                             1)
+print(f"冠軍：{final_match_winner[0]}")
+draw_tournament_hierarchy(quarterfinal_matches, quarter_match_winner, semi_match_winner, final_match_winner[0])
