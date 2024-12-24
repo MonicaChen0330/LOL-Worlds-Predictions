@@ -8,8 +8,8 @@ role_task = ["wardsPlaced", "wardsKilled", "sightWardsBought", "goldEarned",
 team_task = ["kills", "deaths", "assists", "tower_kills", "inhibitor_kills", "gold_earned"]
 basic = ["game_id", "game_length"]
 
-lol_train_data = pd.read_csv("./LOL_gamestats_Crawler/train.csv")
-lol_test_data = pd.read_csv("./LOL_gamestats_Crawler/worlds_test.csv")
+lol_train_data = pd.read_csv("./train.csv")
+lol_test_data = pd.read_csv("./worlds_test.csv")
 
 
 '''
@@ -109,6 +109,19 @@ lol_train_data.columns = [col.replace('blue_', 'A_') if col.startswith('blue_') 
 lol_train_data.columns = [col.replace('red_', 'B_') if col.startswith('red_') else col for col in lol_train_data.columns]
 lol_test_data.columns = [col.replace('blue_', 'A_') if col.startswith('blue_') else col for col in lol_test_data.columns]
 lol_test_data.columns = [col.replace('red_', 'B_') if col.startswith('red_') else col for col in lol_test_data.columns]
+
+# 7
+# Consolidate First Blood Kill
+columns_A_firstBlood = [f"A_{role}_firstBloodKill" for role in player_list]
+columns_B_firstBlood = [f"B_{role}_firstBloodKill" for role in player_list]
+
+lol_train_data["A_firstBlood"] = (lol_train_data[columns_A_firstBlood].sum(axis=1) == 1).astype(int)
+lol_train_data["B_firstBlood"] = (lol_train_data["A_firstBlood"] == 0).astype(int)
+lol_train_data.drop(columns=columns_A_firstBlood + columns_B_firstBlood, inplace=True)
+lol_test_data["A_firstBlood"] = (lol_test_data[columns_A_firstBlood].sum(axis=1) == 1).astype(int)
+lol_test_data["B_firstBlood"] = (lol_test_data["A_firstBlood"] == 0).astype(int)
+lol_test_data.drop(columns=columns_A_firstBlood + columns_B_firstBlood, inplace=True)
+
 
 lol_train_data.to_csv("train_lol_cleaned.csv", index=False)
 lol_test_data.to_csv("test_lol_cleaned.csv", index=False)
