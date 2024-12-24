@@ -75,8 +75,8 @@ def predictor(test_data, model):
         B_teamname = row["B_teamname"]
         game_date = row["game_date"]
         
-        team_1_game_data = find_most_recent_games(team_data, A_teamname, 5, game_date)
-        team_2_game_data = find_most_recent_games(team_data, B_teamname, 5, game_date)
+        team_1_game_data = find_most_recent_games(team_data, A_teamname, 3, game_date)
+        team_2_game_data = find_most_recent_games(team_data, B_teamname, 3, game_date)
 
         if team_1_game_data.empty or team_2_game_data.empty:
             print(f"Skipping match due to insufficient data for teams {A_teamname} and {B_teamname}")
@@ -93,18 +93,24 @@ def predictor(test_data, model):
         X_match_tensor_left = torch.tensor(match_list_left.values, dtype=torch.float32)  # 轉換為 PyTorch 張量
         with torch.no_grad():
             model_outputs = model(X_match_tensor_left)
+            if any(torch.isnan(output).any() for output in model_outputs):
+                print("NaN detected in model outputs!")
+                continue 
             left_wins, left_firstInhibitor, left_firstTower = model_outputs  # 解包輸出
 
         X_match_tensor_right = torch.tensor(match_list_right.values, dtype=torch.float32)  # 轉換為 PyTorch 張量
         with torch.no_grad():
             model_outputs = model(X_match_tensor_right)
+            if any(torch.isnan(output).any() for output in model_outputs):
+                print("NaN detected in model outputs!")
+                continue 
             right_wins, right_firstInhibitor, right_firstTower = model_outputs  # 解包輸出
         
         # 整合機率計算
         votes = {
-            "A_wins": left_wins.mean().item() + (1 - right_wins.mean().item()),
-            "A_firstInhibitorKill": left_firstInhibitor.mean().item() + (1 - right_firstInhibitor.mean().item()),
-            "A_firstTowerKill": left_firstTower.mean().item() + (1 - right_firstTower.mean().item()),
+            "A_wins": (left_wins.mean().item() + (1 - right_wins.mean().item())) / 2,
+            "A_firstInhibitorKill": (left_firstInhibitor.mean().item() + (1 - right_firstInhibitor.mean().item())) / 2,
+            "A_firstTowerKill": (left_firstTower.mean().item() + (1 - right_firstTower.mean().item())) / 2,
         }
 
         for target, vote_value in votes.items():

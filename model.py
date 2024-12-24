@@ -19,9 +19,8 @@ class FCNN(BaseModel):
         self.output_firstInhibitorKill = nn.Linear(32, 1)
         self.output_firstTowerKill = nn.Linear(32, 1)
         self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(0.3)
+        self.dropout = nn.Dropout(0.2)
         self.sigmoid = nn.Sigmoid()  # 適合二分類
-        self.softmax = nn.Softmax(dim=1)
 
     def forward(self, x):
         x = self.fc1(x)
@@ -109,12 +108,12 @@ class ResNetModel(BaseModel):
             num_blocks: ResNet 模塊的數量
         """
         super(ResNetModel, self).__init__()
-        self.input_layer = nn.Linear(input_size, 128)
-        self.res_blocks = nn.Sequential(*[ResidualBlock(128) for _ in range(num_blocks)])
-        self.fc1 = nn.Linear(128, 64)
-        self.output_wins = nn.Linear(64, 1)
-        self.output_firstInhibitorKill = nn.Linear(64, 1)
-        self.output_firstTowerKill = nn.Linear(64, 1)
+        self.input_layer = nn.Linear(input_size, 64)
+        self.res_blocks = nn.Sequential(*[ResidualBlock(64) for _ in range(num_blocks)])
+        self.fc1 = nn.Linear(64, 32)
+        self.output_wins = nn.Linear(32, 1)
+        self.output_firstInhibitorKill = nn.Linear(32, 1)
+        self.output_firstTowerKill = nn.Linear(32, 1)
         self.relu = nn.ReLU()
         self.sigmoid = nn.Sigmoid()
 

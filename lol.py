@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 from prediction import predictor
 
-from model import FCNN, CNN
+from model import FCNN, CNN, ResNetModel
 
 # 讀取訓練與測試數據
 train_file_path = 'train_lol_cleaned.csv'
@@ -77,13 +77,13 @@ y_test_firstTower_tensor = torch.tensor(y_test["A_firstTowerKill"].values, dtype
 
 # 初始化模型、損失函數和優化器
 input_size = X_train_tensor.shape[1]
-model = CNN(input_size)
+model = FCNN(input_size)
 criterion = nn.BCELoss()  # 二元交叉熵損失
 optimizer = optim.Adam(model.parameters(), lr=0.0001)
 
 # 訓練模型
 epochs = 30
-batch_size = 32
+batch_size = 64
 
 class MultiTargetDataset(Dataset):
     def __init__(self, X, y_wins, y_firstInhibitor, y_firstTower):
