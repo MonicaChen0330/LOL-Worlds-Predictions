@@ -111,7 +111,7 @@ lol_test_data.columns = [col.replace('blue_', 'A_') if col.startswith('blue_') e
 lol_test_data.columns = [col.replace('red_', 'B_') if col.startswith('red_') else col for col in lol_test_data.columns]
 
 # 7
-# Consolidate First Blood Kill
+# Combine First Blood Kill
 columns_A_firstBlood = [f"A_{role}_firstBloodKill" for role in player_list]
 columns_B_firstBlood = [f"B_{role}_firstBloodKill" for role in player_list]
 
