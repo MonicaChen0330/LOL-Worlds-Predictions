@@ -7,7 +7,9 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import roc_auc_score, roc_curve
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
-from prediction import predictor
+from prediction import predictor, quarterfinal_predictor
+import networkx as nx
+import matplotlib.animation as animation
 
 from model import FCNN, CNN, ResNetModel
 
@@ -17,8 +19,39 @@ test_file_path = 'test_lol_cleaned.csv'
 
 train_data = pd.read_csv(train_file_path)
 test_data = pd.read_csv(test_file_path)
+train_data = train_data.drop(columns=["A_firstInhibitorKill", "B_firstInhibitorKill"])
+test_data = test_data.drop(columns=["A_firstInhibitorKill", "B_firstInhibitorKill"])
 
-target_list = ['A_wins', "A_firstInhibitorKill", "A_firstTowerKill", 'B_firstInhibitorKill', 'B_firstTowerKill']
+# 8
+# Drop relevancy less than 0.002
+least_relevancy_feature = ['top_totalHeal', 'sup_sight', 'sup_totalHeal', 'adc_sight', 'mid_sight',
+                            'mid_largestMultiKill', 'top_sight', 'jun_totalHeal', 'adc_totalHeal',
+                            'jun_largestKillingSpree', 'top_largestMultiKill', 'mid_totalHeal',
+                            'elder_dragon_kills', 'sup_kills', 'jun_largestMultiKill', 'herald_kills',
+                            'sup_largestKillingSpree', 'sup_largestMultiKill']
+for side in ["A", "B"]:
+    for feat in least_relevancy_feature:
+        column_name = f"{side}_{feat}"
+        if column_name in train_data.columns:
+            train_data.drop(columns=[column_name], inplace=True)
+        if column_name in test_data.columns:
+            test_data.drop(columns=[column_name], inplace=True)
+# 9
+# Delete voidgrub and outlier and opScore
+train_data.drop(columns=["A_voidgrubs", "B_voidgrubs"], inplace=True)
+test_data.drop(columns=["A_voidgrubs", "B_voidgrubs"], inplace=True)
+remove_feature = ['totalTimeCrowdControlDealt', 'opScore']
+for side in ["A", "B"]:
+    for player in ["top", "mid", "adc", "sup", "jun"]:
+        for feat in remove_feature:
+            column_name = f"{side}_{player}_{feat}"
+            if column_name in train_data.columns:
+                train_data.drop(columns=[column_name], inplace=True)
+            if column_name in test_data.columns:
+                test_data.drop(columns=[column_name], inplace=True)
+
+target_list = ['A_wins', "A_firstTowerKill", "A_firstBlood",
+                'B_firstTowerKill', "B_firstBlood"]
 #target = ['A_wins']
 
 # 分離特徵與目標變量
@@ -68,11 +101,11 @@ print(X_test_scaled.head(5))
 # 轉換為 PyTorch 張量
 X_train_tensor = torch.tensor(X_train_scaled.values, dtype=torch.float32)
 y_train_wins_tensor = torch.tensor(y_train["A_wins"].values, dtype=torch.float32).unsqueeze(1)
-y_train_firstInhibitor_tensor = torch.tensor(y_train["A_firstInhibitorKill"].values, dtype=torch.float32).unsqueeze(1)
+y_train_firstBlood_tensor = torch.tensor(y_train["A_firstBlood"].values, dtype=torch.float32).unsqueeze(1)
 y_train_firstTower_tensor = torch.tensor(y_train["A_firstTowerKill"].values, dtype=torch.float32).unsqueeze(1)
 X_test_tensor = torch.tensor(X_test_scaled.values, dtype=torch.float32)
 y_test_wins_tensor = torch.tensor(y_test["A_wins"].values, dtype=torch.float32).unsqueeze(1)
-y_test_firstInhibitor_tensor = torch.tensor(y_test["A_firstInhibitorKill"].values, dtype=torch.float32).unsqueeze(1)
+y_test_firstBlood_tensor = torch.tensor(y_test["A_firstBlood"].values, dtype=torch.float32).unsqueeze(1)
 y_test_firstTower_tensor = torch.tensor(y_test["A_firstTowerKill"].values, dtype=torch.float32).unsqueeze(1)
 
 # 初始化模型、損失函數和優化器
@@ -86,19 +119,19 @@ epochs = 30
 batch_size = 64
 
 class MultiTargetDataset(Dataset):
-    def __init__(self, X, y_wins, y_firstInhibitor, y_firstTower):
+    def __init__(self, X, y_wins, y_firstBlood, y_firstTower):
         self.X = X
         self.y_wins = y_wins
-        self.y_firstInhibitor = y_firstInhibitor
+        self.y_firstBlood = y_firstBlood
         self.y_firstTower = y_firstTower
 
     def __len__(self):
         return len(self.X)
     
     def __getitem__(self, idx):
-        return self.X[idx], self.y_wins[idx], self.y_firstInhibitor[idx], self.y_firstTower[idx]
+        return self.X[idx], self.y_wins[idx], self.y_firstBlood[idx], self.y_firstTower[idx]
 
-train_dataset = MultiTargetDataset(X_train_tensor, y_train_wins_tensor, y_train_firstInhibitor_tensor, y_train_firstInhibitor_tensor)
+train_dataset = MultiTargetDataset(X_train_tensor, y_train_wins_tensor, y_train_firstBlood_tensor, y_train_firstBlood_tensor)
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
 for epoch in range(epochs):
@@ -106,14 +139,14 @@ for epoch in range(epochs):
 
     epoch_loss = 0
     for batch in train_loader:
-        X_batch, y_wins_batch, y_firstInhibitor_batch, y_firstTower_batch = batch
+        X_batch, y_wins_batch, y_firstBlood_batch, y_firstTower_batch = batch
         optimizer.zero_grad()
-        wins, firstInhibitor, firstTower = model(X_batch)
+        wins, firstBlood, firstTower = model(X_batch)
         # 計算損失
         loss_wins = criterion(wins, y_wins_batch)
-        loss_firstInhibitor = criterion(firstInhibitor, y_firstInhibitor_batch)
+        loss_firstBlood = criterion(firstBlood, y_firstBlood_batch)
         loss_firstTower = criterion(firstTower, y_firstTower_batch)
-        loss = loss_wins + loss_firstInhibitor + loss_firstTower
+        loss = loss_wins + loss_firstBlood + loss_firstTower
         loss.backward()
         optimizer.step()
         
@@ -163,4 +196,93 @@ test_data_scaled = test_data.copy()
 test_data_scaled[X_test_features.columns] = X_test_scaled[X_test_features.columns]
 
 # 呼叫 predictor 函數，傳遞完整的測試數據
-predictor(test_data_scaled, model)
+def draw_tournament_hierarchy(quarterfinal_matches, quarter_winners, semifinal_winners, final_winner):
+    """
+    繪製錦標賽圖表
+    :param matches: 比賽的列表，每場比賽是 (隊伍A, 隊伍B)
+    :param winners: 對應的勝者列表，按比賽順序排列
+    :param stage: 比賽階段名稱 (如 "Quarterfinals", "Semifinals", "Finals")
+    """
+    G = nx.DiGraph()
+
+    # Ensure inputs are lists or empty lists
+    quarter_winners = quarter_winners or []
+    semifinal_winners = semifinal_winners or []
+    final_winner = final_winner or "TBD"
+
+    # Adding quarterfinal matches
+    for i, match in enumerate(quarterfinal_matches):
+        G.add_node(f"Q{i+1}A", label=match[0])
+        G.add_node(f"Q{i+1}B", label=match[1])
+        winner_label = quarter_winners[i] if i < len(quarter_winners) else "TBD"
+        G.add_node(f"Q{i+1}W", label=winner_label)
+        G.add_edge(f"Q{i+1}A", f"Q{i+1}W")
+        G.add_edge(f"Q{i+1}B", f"Q{i+1}W")
+
+    # Adding semifinal matches
+    for i in range(2):
+        semifinal_winner_label = semifinal_winners[i] if i < len(semifinal_winners) else "TBD"
+        G.add_node(f"S{i+1}W", label=semifinal_winner_label)
+        G.add_edge(f"Q{2*i+1}W", f"S{i+1}W")
+        G.add_edge(f"Q{2*i+2}W", f"S{i+1}W")
+    # Adding final match
+    final_winner_label = final_winner if final_winner else "TBD"
+    G.add_node("F1W", label=final_winner_label)
+    G.add_edge("S1W", "F1W")
+    G.add_edge("S2W", "F1W")
+
+    pos = {f"Q{i+1}A": (0, -i * 2) for i in range(4)}
+    pos.update({f"Q{i+1}B": (0, -i * 2 - 1) for i in range(4)})
+    pos.update({f"Q{i+1}W": (1, -i * 2 - 0.5) for i in range(4)})
+
+    pos.update({f"S{i+1}W": (2, -i * 4 - 1) for i in range(2)})
+    pos.update({"F1W": (3, -2)})
+
+    labels = nx.get_node_attributes(G, "label")
+    nx.draw(G, pos, labels=labels, with_labels=True, node_size=2000, node_color="skyblue", font_size=10, font_color="black")
+
+    plt.title("Tournament Hierarchy")
+    plt.show()
+
+#predictor(test_data_scaled, model)
+# 定義八強比賽列表
+quarterfinal_matches = [
+    ("LNG", "WB"),
+    ("HLE", "BLG"),
+    ("TES", "T1"),
+    ("GEN", "FLY")
+]
+print(f"八強比賽列表：{quarterfinal_matches}")
+(quarter_match_winner,
+ quarter_first_blood,
+ quarter_first_tower) = quarterfinal_predictor(test_data_scaled,
+                                               model, 
+                                               quarterfinal_matches,
+                                               3)
+print(f"八強比賽預測結果：{quarter_match_winner}")
+draw_tournament_hierarchy(quarterfinal_matches, quarter_match_winner, [], "")
+
+semifinal_matches = [
+    (quarter_match_winner[0], quarter_match_winner[1]),
+    (quarter_match_winner[2], quarter_match_winner[3])
+]
+(semi_match_winner,
+ semi_first_blood,
+ semi_first_tower) = quarterfinal_predictor(test_data_scaled,
+                                            model,
+                                            semifinal_matches,
+                                            2)
+print(f"四強比賽預測結果：{semi_match_winner}")
+draw_tournament_hierarchy(quarterfinal_matches, quarter_match_winner, semi_match_winner, "")
+
+final_matches = [
+    (semi_match_winner[0], semi_match_winner[1])
+]
+(final_match_winner,
+ final_first_blood,
+ final_first_tower) = quarterfinal_predictor(test_data_scaled,
+                                             model,
+                                             final_matches,
+                                             1)
+print(f"冠軍：{final_match_winner[0]}")
+draw_tournament_hierarchy(quarterfinal_matches, quarter_match_winner, semi_match_winner, final_match_winner[0])

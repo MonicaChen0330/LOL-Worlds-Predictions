@@ -31,12 +31,12 @@ def convert_to_teamdata(df):
 
     return team_data
 
-def find_most_recent_games(df, team_name, n_games, compete_date=None):
+def find_most_recent_games(df, team_name, n_games, compete_date="2024-10-18T00:00:00.000Z"):
     """
     Find the most recent games before compete date for a given team
     """
     if compete_date is not None:
-        df = df[df["game_date"] < compete_date]
+        df = df[df["game_date"] <= compete_date]
     team_games = df[(df["teamname"] == team_name)]
     return team_games.head(n_games)
 
@@ -45,8 +45,8 @@ def produce_match_list(team_data_1, team_data_2):
     Based on the data of two teams, combine each other to produce new match list
     """
     match_list = []
-    for i, game_1 in team_data_1.iterrows():
-        for j, game_2 in team_data_2.iterrows():
+    for _, game_1 in team_data_1.iterrows():
+        for _, game_2 in team_data_2.iterrows():
             # set game_1 columns to all have "a_" prefix, and game_2 columns to all have "b_" prefix
             game_1 = game_1.rename(lambda x: "a_" + x if not x.startswith("a_") else x)
             game_2 = game_2.rename(lambda x: "b_" + x if not x.startswith("b_") else x)
@@ -55,7 +55,7 @@ def produce_match_list(team_data_1, team_data_2):
             match_list.append(match)
 
     match_list = pd.DataFrame(match_list)
-    match_list.drop(columns=["a_teamname", "b_teamname", "a_game_date", "b_game_date", "a_firstInhibitorKill", "b_firstInhibitorKill", "a_firstTowerKill", "b_firstTowerKill"], inplace=True)
+    match_list.drop(columns=["a_teamname", "b_teamname", "a_game_date", "b_game_date", "a_firstBlood", "b_firstBlood", "a_firstTowerKill", "b_firstTowerKill"], inplace=True)
     return match_list
 
 def predictor(test_data, model):
@@ -65,18 +65,18 @@ def predictor(test_data, model):
     team_data = team_data.loc[:, ~team_data.columns.duplicated()]
 
     # 定義目標
-    targets = ["A_wins", "A_firstInhibitorKill", "A_firstTowerKill"]
+    targets = ["A_wins", "A_firstBloodKill", "A_firstTowerKill"]
     actual_results = {target: [] for target in targets}
     predicted_results_roc = {target: [] for target in targets}
     predicted_results_acc = {target: [] for target in targets}
 
-    for index, row in tqdm(test_data.iterrows(), total=len(test_data), desc="Processing CSV file"):
+    for _, row in tqdm(test_data.iterrows(), total=len(test_data), desc="Processing CSV file"):
         A_teamname = row["A_teamname"]
         B_teamname = row["B_teamname"]
-        game_date = row["game_date"]
-        
-        team_1_game_data = find_most_recent_games(team_data, A_teamname, 3, game_date)
-        team_2_game_data = find_most_recent_games(team_data, B_teamname, 3, game_date)
+        print(f"Processing match between {A_teamname} and {B_teamname}")
+
+        team_1_game_data = find_most_recent_games(team_data, A_teamname, 3)
+        team_2_game_data = find_most_recent_games(team_data, B_teamname, 3)
 
         if team_1_game_data.empty or team_2_game_data.empty:
             print(f"Skipping match due to insufficient data for teams {A_teamname} and {B_teamname}")
@@ -96,7 +96,7 @@ def predictor(test_data, model):
             if any(torch.isnan(output).any() for output in model_outputs):
                 print("NaN detected in model outputs!")
                 continue 
-            left_wins, left_firstInhibitor, left_firstTower = model_outputs  # 解包輸出
+            left_wins, left_firstBlood, left_firstTower = model_outputs  # 解包輸出
 
         X_match_tensor_right = torch.tensor(match_list_right.values, dtype=torch.float32)  # 轉換為 PyTorch 張量
         with torch.no_grad():
@@ -104,19 +104,17 @@ def predictor(test_data, model):
             if any(torch.isnan(output).any() for output in model_outputs):
                 print("NaN detected in model outputs!")
                 continue 
-            right_wins, right_firstInhibitor, right_firstTower = model_outputs  # 解包輸出
+            right_wins, right_firstBlood, right_firstTower = model_outputs  # 解包輸出
         
         # 整合機率計算
         votes = {
             "A_wins": (left_wins.mean().item() + (1 - right_wins.mean().item())) / 2,
-            "A_firstInhibitorKill": (left_firstInhibitor.mean().item() + (1 - right_firstInhibitor.mean().item())) / 2,
+            "A_firstBlood": (left_firstBlood.mean().item() + (1 - right_firstBlood.mean().item())) / 2,
             "A_firstTowerKill": (left_firstTower.mean().item() + (1 - right_firstTower.mean().item())) / 2,
         }
 
         for target, vote_value in votes.items():
             predicted_results_roc[target].append(vote_value)
-
-        for target, vote_value in votes.items():
             predicted_results_acc[target].append(1 if vote_value > 0.5 else 0)  # 轉換為二元預測結果
 
     roc_auc_scores = {}
@@ -154,3 +152,72 @@ def predictor(test_data, model):
     print("ROC-AUC 和 Accuracy 已保存至 results.csv")
 
     return roc_auc_scores, accuracy_scores
+
+def quarterfinal_predictor(test_data, model, quarterfinal_matches, history_match):
+    team_data = convert_to_teamdata(test_data)
+    team_data = team_data.loc[:, ~team_data.columns.duplicated()]
+
+    # 定義目標
+    targets = ["A_wins", "A_firstBlood", "A_firstTowerKill"]
+    actual_results = {target: [] for target in targets}
+    predicted_results_roc = {target: [] for target in targets}
+    predicted_results_acc = {target: [] for target in targets}
+
+    for A_teamname, B_teamname in quarterfinal_matches:
+        print(f"Processing match between {A_teamname} and {B_teamname}")
+        game_date = test_data["game_date"].max()  # 使用最新日期的數據
+
+        team_1_game_data = find_most_recent_games(team_data, A_teamname, history_match, compete_date=game_date)
+        team_2_game_data = find_most_recent_games(team_data, B_teamname, history_match, compete_date=game_date)
+
+        if team_1_game_data.empty or team_2_game_data.empty:
+            print(f"Skipping match due to insufficient data for teams {A_teamname} and {B_teamname}")
+            continue
+
+        match_list_left = produce_match_list(team_1_game_data, team_2_game_data)
+        match_list_right = produce_match_list(team_2_game_data, team_1_game_data)
+
+        X_match_tensor_left = torch.tensor(match_list_left.values, dtype=torch.float32)  # 轉換為 PyTorch 張量
+        with torch.no_grad():
+            model_outputs = model(X_match_tensor_left)
+            if any(torch.isnan(output).any() for output in model_outputs):
+                print("NaN detected in model outputs!")
+                continue 
+            left_wins, left_firstBlood, left_firstTower = model_outputs  # 解包輸出
+
+        X_match_tensor_right = torch.tensor(match_list_right.values, dtype=torch.float32)  # 轉換為 PyTorch 張量
+        with torch.no_grad():
+            model_outputs = model(X_match_tensor_right)
+            if any(torch.isnan(output).any() for output in model_outputs):
+                print("NaN detected in model outputs!")
+                continue 
+            right_wins, right_firstBlood, right_firstTower = model_outputs  # 解包輸出
+
+        # 整合機率計算
+        votes = {
+            "A_wins": (left_wins.mean().item() + (1 - right_wins.mean().item())) / 2,
+            "A_firstBlood": (left_firstBlood.mean().item() + (1 - right_firstBlood.mean().item())) / 2,
+            "A_firstTowerKill": (left_firstTower.mean().item() + (1 - right_firstTower.mean().item())) / 2,
+        }
+
+        for target, vote_value in votes.items():
+            predicted_results_roc[target].append(vote_value)
+            if target == "A_wins":
+                predicted_results_acc[target].append(1 if vote_value > 0.5 else 0)
+            else:
+                predicted_results_acc[target].append(vote_value)
+        
+        print(f"Predicted probabilities: {predicted_results_acc}")
+    match_winner = []
+    first_tower = {}
+    first_blood = {}
+    for i in range(len(predicted_results_acc["A_wins"])):
+        if predicted_results_acc["A_wins"][i] == 1:
+            match_winner.append(quarterfinal_matches[i][0])
+        else:
+            match_winner.append(quarterfinal_matches[i][1])
+        first_blood[quarterfinal_matches[i][0]] = predicted_results_acc["A_firstBlood"][i]
+        first_blood[quarterfinal_matches[i][1]] = 1 - predicted_results_acc["A_firstBlood"][i]
+        first_tower[quarterfinal_matches[i][0]] = predicted_results_acc["A_firstTowerKill"][i]
+        first_tower[quarterfinal_matches[i][1]] = 1 - predicted_results_acc["A_firstTowerKill"][i]
+    return match_winner, first_blood, first_tower
