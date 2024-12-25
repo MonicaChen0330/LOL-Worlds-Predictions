@@ -22,6 +22,34 @@ test_data = pd.read_csv(test_file_path)
 train_data = train_data.drop(columns=["A_firstInhibitorKill", "B_firstInhibitorKill"])
 test_data = test_data.drop(columns=["A_firstInhibitorKill", "B_firstInhibitorKill"])
 
+# 8
+# Drop relevancy less than 0.002
+least_relevancy_feature = ['top_totalHeal', 'sup_sight', 'sup_totalHeal', 'adc_sight', 'mid_sight',
+                            'mid_largestMultiKill', 'top_sight', 'jun_totalHeal', 'adc_totalHeal',
+                            'jun_largestKillingSpree', 'top_largestMultiKill', 'mid_totalHeal',
+                            'elder_dragon_kills', 'sup_kills', 'jun_largestMultiKill', 'herald_kills',
+                            'sup_largestKillingSpree', 'sup_largestMultiKill']
+for side in ["A", "B"]:
+    for feat in least_relevancy_feature:
+        column_name = f"{side}_{feat}"
+        if column_name in train_data.columns:
+            train_data.drop(columns=[column_name], inplace=True)
+        if column_name in test_data.columns:
+            test_data.drop(columns=[column_name], inplace=True)
+# 9
+# Delete voidgrub and outlier and opScore
+train_data.drop(columns=["A_voidgrubs", "B_voidgrubs"], inplace=True)
+test_data.drop(columns=["A_voidgrubs", "B_voidgrubs"], inplace=True)
+remove_feature = ['totalTimeCrowdControlDealt', 'opScore']
+for side in ["A", "B"]:
+    for player in ["top", "mid", "adc", "sup", "jun"]:
+        for feat in remove_feature:
+            column_name = f"{side}_{player}_{feat}"
+            if column_name in train_data.columns:
+                train_data.drop(columns=[column_name], inplace=True)
+            if column_name in test_data.columns:
+                test_data.drop(columns=[column_name], inplace=True)
+
 target_list = ['A_wins', "A_firstTowerKill", "A_firstBlood",
                 'B_firstTowerKill', "B_firstBlood"]
 #target = ['A_wins']
