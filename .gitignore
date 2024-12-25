@@ -1,5 +1,4 @@
-results.csv
-results_quarterfinal.csv
-test_lol_cleaned.csv
 train_lol_cleaned.csv
+test_lol_cleaned.csv
+results.csv
 __pycache__/

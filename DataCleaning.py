@@ -8,8 +8,8 @@ role_task = ["wardsPlaced", "wardsKilled", "sightWardsBought", "goldEarned",
 team_task = ["kills", "deaths", "assists", "tower_kills", "inhibitor_kills", "gold_earned"]
 basic = ["game_id", "game_length"]
 
-lol_train_data = pd.read_csv("./train.csv")
-lol_test_data = pd.read_csv("./worlds_test.csv")
+lol_train_data = pd.read_csv("./LOL_gamestats_crawler/train.csv")
+lol_test_data = pd.read_csv("./LOL_gamestats_crawler/worlds_test.csv")
 
 
 '''
@@ -122,6 +122,20 @@ lol_test_data["A_firstBlood"] = (lol_test_data[columns_A_firstBlood].sum(axis=1)
 lol_test_data["B_firstBlood"] = (lol_test_data["A_firstBlood"] == 0).astype(int)
 lol_test_data.drop(columns=columns_A_firstBlood + columns_B_firstBlood, inplace=True)
 
+# 8
+# Drop relevancy less than 0.002
+least_relevancy_feature = ['top_totalHeal', 'sup_sight', 'sup_totalHeal', 'adc_sight', 'mid_sight',
+                            'mid_largestMultiKill', 'top_sight', 'jun_totalHeal', 'adc_totalHeal',
+                            'jun_largestKillingSpree', 'top_largestMultiKill', 'mid_totalHeal',
+                            'elder_dragon_kills', 'sup_kills', 'jun_largestMultiKill', 'herald_kills',
+                            'sup_largestKillingSpree', 'sup_largestMultiKill']
+for side in ["A", "B"]:
+    for feat in least_relevancy_feature:
+        column_name = f"{side}_{feat}"
+        if column_name in lol_train_data.columns:
+            lol_train_data.drop(columns=[column_name], inplace=True)
+        if column_name in lol_test_data.columns:
+            lol_test_data.drop(columns=[column_name], inplace=True)
 
 lol_train_data.to_csv("train_lol_cleaned.csv", index=False)
 lol_test_data.to_csv("test_lol_cleaned.csv", index=False)

@@ -19,8 +19,11 @@ test_file_path = 'test_lol_cleaned.csv'
 
 train_data = pd.read_csv(train_file_path)
 test_data = pd.read_csv(test_file_path)
+train_data = train_data.drop(columns=["A_firstInhibitorKill", "B_firstInhibitorKill"])
+test_data = test_data.drop(columns=["A_firstInhibitorKill", "B_firstInhibitorKill"])
 
-target_list = ['A_wins', "A_firstInhibitorKill", "A_firstTowerKill", 'B_firstInhibitorKill', 'B_firstTowerKill']
+target_list = ['A_wins', "A_firstTowerKill", "A_firstBlood",
+                'B_firstTowerKill', "B_firstBlood"]
 #target = ['A_wins']
 
 # 分離特徵與目標變量
@@ -70,11 +73,11 @@ print(X_test_scaled.head(5))
 # 轉換為 PyTorch 張量
 X_train_tensor = torch.tensor(X_train_scaled.values, dtype=torch.float32)
 y_train_wins_tensor = torch.tensor(y_train["A_wins"].values, dtype=torch.float32).unsqueeze(1)
-y_train_firstInhibitor_tensor = torch.tensor(y_train["A_firstInhibitorKill"].values, dtype=torch.float32).unsqueeze(1)
+y_train_firstBlood_tensor = torch.tensor(y_train["A_firstBlood"].values, dtype=torch.float32).unsqueeze(1)
 y_train_firstTower_tensor = torch.tensor(y_train["A_firstTowerKill"].values, dtype=torch.float32).unsqueeze(1)
 X_test_tensor = torch.tensor(X_test_scaled.values, dtype=torch.float32)
 y_test_wins_tensor = torch.tensor(y_test["A_wins"].values, dtype=torch.float32).unsqueeze(1)
-y_test_firstInhibitor_tensor = torch.tensor(y_test["A_firstInhibitorKill"].values, dtype=torch.float32).unsqueeze(1)
+y_test_firstBlood_tensor = torch.tensor(y_test["A_firstBlood"].values, dtype=torch.float32).unsqueeze(1)
 y_test_firstTower_tensor = torch.tensor(y_test["A_firstTowerKill"].values, dtype=torch.float32).unsqueeze(1)
 
 # 初始化模型、損失函數和優化器
@@ -88,19 +91,19 @@ epochs = 30
 batch_size = 64
 
 class MultiTargetDataset(Dataset):
-    def __init__(self, X, y_wins, y_firstInhibitor, y_firstTower):
+    def __init__(self, X, y_wins, y_firstBlood, y_firstTower):
         self.X = X
         self.y_wins = y_wins
-        self.y_firstInhibitor = y_firstInhibitor
+        self.y_firstBlood = y_firstBlood
         self.y_firstTower = y_firstTower
 
     def __len__(self):
         return len(self.X)
     
     def __getitem__(self, idx):
-        return self.X[idx], self.y_wins[idx], self.y_firstInhibitor[idx], self.y_firstTower[idx]
+        return self.X[idx], self.y_wins[idx], self.y_firstBlood[idx], self.y_firstTower[idx]
 
-train_dataset = MultiTargetDataset(X_train_tensor, y_train_wins_tensor, y_train_firstInhibitor_tensor, y_train_firstInhibitor_tensor)
+train_dataset = MultiTargetDataset(X_train_tensor, y_train_wins_tensor, y_train_firstBlood_tensor, y_train_firstBlood_tensor)
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
 for epoch in range(epochs):
@@ -108,14 +111,14 @@ for epoch in range(epochs):
 
     epoch_loss = 0
     for batch in train_loader:
-        X_batch, y_wins_batch, y_firstInhibitor_batch, y_firstTower_batch = batch
+        X_batch, y_wins_batch, y_firstBlood_batch, y_firstTower_batch = batch
         optimizer.zero_grad()
-        wins, firstInhibitor, firstTower = model(X_batch)
+        wins, firstBlood, firstTower = model(X_batch)
         # 計算損失
         loss_wins = criterion(wins, y_wins_batch)
-        loss_firstInhibitor = criterion(firstInhibitor, y_firstInhibitor_batch)
+        loss_firstBlood = criterion(firstBlood, y_firstBlood_batch)
         loss_firstTower = criterion(firstTower, y_firstTower_batch)
-        loss = loss_wins + loss_firstInhibitor + loss_firstTower
+        loss = loss_wins + loss_firstBlood + loss_firstTower
         loss.backward()
         optimizer.step()
         
@@ -223,7 +226,7 @@ quarterfinal_matches = [
 ]
 print(f"八強比賽列表：{quarterfinal_matches}")
 (quarter_match_winner,
- quarter_first_inhibitor,
+ quarter_first_blood,
  quarter_first_tower) = quarterfinal_predictor(test_data_scaled,
                                                model, 
                                                quarterfinal_matches,
@@ -236,7 +239,7 @@ semifinal_matches = [
     (quarter_match_winner[2], quarter_match_winner[3])
 ]
 (semi_match_winner,
- semi_first_inhibitor,
+ semi_first_blood,
  semi_first_tower) = quarterfinal_predictor(test_data_scaled,
                                             model,
                                             semifinal_matches,
@@ -248,7 +251,7 @@ final_matches = [
     (semi_match_winner[0], semi_match_winner[1])
 ]
 (final_match_winner,
- final_first_inhibitor,
+ final_first_blood,
  final_first_tower) = quarterfinal_predictor(test_data_scaled,
                                              model,
                                              final_matches,

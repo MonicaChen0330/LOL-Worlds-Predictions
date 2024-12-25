@@ -55,7 +55,7 @@ def produce_match_list(team_data_1, team_data_2):
             match_list.append(match)
 
     match_list = pd.DataFrame(match_list)
-    match_list.drop(columns=["a_teamname", "b_teamname", "a_game_date", "b_game_date", "a_firstInhibitorKill", "b_firstInhibitorKill", "a_firstTowerKill", "b_firstTowerKill"], inplace=True)
+    match_list.drop(columns=["a_teamname", "b_teamname", "a_game_date", "b_game_date", "a_firstBlood", "b_firstBlood", "a_firstTowerKill", "b_firstTowerKill"], inplace=True)
     return match_list
 
 def predictor(test_data, model):
@@ -65,7 +65,7 @@ def predictor(test_data, model):
     team_data = team_data.loc[:, ~team_data.columns.duplicated()]
 
     # 定義目標
-    targets = ["A_wins", "A_firstInhibitorKill", "A_firstTowerKill"]
+    targets = ["A_wins", "A_firstBloodKill", "A_firstTowerKill"]
     actual_results = {target: [] for target in targets}
     predicted_results_roc = {target: [] for target in targets}
     predicted_results_acc = {target: [] for target in targets}
@@ -96,7 +96,7 @@ def predictor(test_data, model):
             if any(torch.isnan(output).any() for output in model_outputs):
                 print("NaN detected in model outputs!")
                 continue 
-            left_wins, left_firstInhibitor, left_firstTower = model_outputs  # 解包輸出
+            left_wins, left_firstBlood, left_firstTower = model_outputs  # 解包輸出
 
         X_match_tensor_right = torch.tensor(match_list_right.values, dtype=torch.float32)  # 轉換為 PyTorch 張量
         with torch.no_grad():
@@ -104,12 +104,12 @@ def predictor(test_data, model):
             if any(torch.isnan(output).any() for output in model_outputs):
                 print("NaN detected in model outputs!")
                 continue 
-            right_wins, right_firstInhibitor, right_firstTower = model_outputs  # 解包輸出
+            right_wins, right_firstBlood, right_firstTower = model_outputs  # 解包輸出
         
         # 整合機率計算
         votes = {
             "A_wins": (left_wins.mean().item() + (1 - right_wins.mean().item())) / 2,
-            "A_firstInhibitorKill": (left_firstInhibitor.mean().item() + (1 - right_firstInhibitor.mean().item())) / 2,
+            "A_firstBlood": (left_firstBlood.mean().item() + (1 - right_firstBlood.mean().item())) / 2,
             "A_firstTowerKill": (left_firstTower.mean().item() + (1 - right_firstTower.mean().item())) / 2,
         }
 
@@ -158,7 +158,7 @@ def quarterfinal_predictor(test_data, model, quarterfinal_matches, history_match
     team_data = team_data.loc[:, ~team_data.columns.duplicated()]
 
     # 定義目標
-    targets = ["A_wins", "A_firstInhibitorKill", "A_firstTowerKill"]
+    targets = ["A_wins", "A_firstBlood", "A_firstTowerKill"]
     actual_results = {target: [] for target in targets}
     predicted_results_roc = {target: [] for target in targets}
     predicted_results_acc = {target: [] for target in targets}
@@ -183,7 +183,7 @@ def quarterfinal_predictor(test_data, model, quarterfinal_matches, history_match
             if any(torch.isnan(output).any() for output in model_outputs):
                 print("NaN detected in model outputs!")
                 continue 
-            left_wins, left_firstInhibitor, left_firstTower = model_outputs  # 解包輸出
+            left_wins, left_firstBlood, left_firstTower = model_outputs  # 解包輸出
 
         X_match_tensor_right = torch.tensor(match_list_right.values, dtype=torch.float32)  # 轉換為 PyTorch 張量
         with torch.no_grad():
@@ -191,12 +191,12 @@ def quarterfinal_predictor(test_data, model, quarterfinal_matches, history_match
             if any(torch.isnan(output).any() for output in model_outputs):
                 print("NaN detected in model outputs!")
                 continue 
-            right_wins, right_firstInhibitor, right_firstTower = model_outputs  # 解包輸出
+            right_wins, right_firstBlood, right_firstTower = model_outputs  # 解包輸出
 
         # 整合機率計算
         votes = {
             "A_wins": (left_wins.mean().item() + (1 - right_wins.mean().item())) / 2,
-            "A_firstInhibitorKill": (left_firstInhibitor.mean().item() + (1 - right_firstInhibitor.mean().item())) / 2,
+            "A_firstBlood": (left_firstBlood.mean().item() + (1 - right_firstBlood.mean().item())) / 2,
             "A_firstTowerKill": (left_firstTower.mean().item() + (1 - right_firstTower.mean().item())) / 2,
         }
 
@@ -210,14 +210,14 @@ def quarterfinal_predictor(test_data, model, quarterfinal_matches, history_match
         print(f"Predicted probabilities: {predicted_results_acc}")
     match_winner = []
     first_tower = {}
-    first_inhibitor = {}
+    first_blood = {}
     for i in range(len(predicted_results_acc["A_wins"])):
         if predicted_results_acc["A_wins"][i] == 1:
             match_winner.append(quarterfinal_matches[i][0])
         else:
             match_winner.append(quarterfinal_matches[i][1])
-        first_inhibitor[quarterfinal_matches[i][0]] = predicted_results_acc["A_firstInhibitorKill"][i]
-        first_inhibitor[quarterfinal_matches[i][1]] = 1 - predicted_results_acc["A_firstInhibitorKill"][i]
+        first_blood[quarterfinal_matches[i][0]] = predicted_results_acc["A_firstBlood"][i]
+        first_blood[quarterfinal_matches[i][1]] = 1 - predicted_results_acc["A_firstBlood"][i]
         first_tower[quarterfinal_matches[i][0]] = predicted_results_acc["A_firstTowerKill"][i]
         first_tower[quarterfinal_matches[i][1]] = 1 - predicted_results_acc["A_firstTowerKill"][i]
-    return match_winner, first_inhibitor, first_tower
+    return match_winner, first_blood, first_tower
