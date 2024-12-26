@@ -11,7 +11,7 @@ from prediction import predictor, quarterfinal_predictor
 import networkx as nx
 import matplotlib.animation as animation
 
-from model import FCNN, CNN, ResNetModel
+from model import FNN, CNN, ResNetModel
 
 # 讀取訓練與測試數據
 train_file_path = 'train_lol_cleaned.csv'
@@ -106,7 +106,7 @@ y_test_firstTower_tensor = torch.tensor(y_test["A_firstTowerKill"].values, dtype
 
 # 初始化模型、損失函數和優化器
 input_size = X_train_tensor.shape[1]
-model = FCNN(input_size)
+model = FNN(input_size)
 criterion = nn.BCELoss()  # 二元交叉熵損失
 optimizer = optim.Adam(model.parameters(), lr=0.0001)
 
@@ -193,7 +193,8 @@ test_data_scaled = test_data.copy()
 test_data_scaled[X_test_features.columns] = X_test_scaled[X_test_features.columns]
 
 # 呼叫 predictor 函數，傳遞完整的測試數據
-def draw_tournament_hierarchy(quarterfinal_matches, quarter_winners, semifinal_winners, final_winner):
+def draw_tournament_hierarchy(quarterfinal_matches, quarter_winners,
+                              semifinal_winners, final_winner, tournament_name):
     """
     繪製錦標賽圖表
     :param matches: 比賽的列表，每場比賽是 (隊伍A, 隊伍B)
@@ -239,47 +240,104 @@ def draw_tournament_hierarchy(quarterfinal_matches, quarter_winners, semifinal_w
     nx.draw(G, pos, labels=labels, with_labels=True, node_size=2000, node_color="skyblue", font_size=10, font_color="black")
 
     plt.title("Tournament Hierarchy")
+    plt.axis("off")
+    plt.gcf().canvas.manager.set_window_title(tournament_name)
     plt.show()
 
 #predictor(test_data_scaled, model)
-# 定義八強比賽列表
-quarterfinal_matches = [
-    ("LNG", "WB"),
-    ("HLE", "BLG"),
-    ("TES", "T1"),
-    ("GEN", "FLY")
-]
-print(f"八強比賽列表：{quarterfinal_matches}")
-(quarter_match_winner,
- quarter_first_blood,
- quarter_first_tower) = quarterfinal_predictor(test_data_scaled,
-                                               model, 
-                                               quarterfinal_matches,
-                                               3)
-print(f"八強比賽預測結果：{quarter_match_winner}")
-#draw_tournament_hierarchy(quarterfinal_matches, quarter_match_winner, [], "")
+def worlds_2024():
+    # 定義八強比賽列表
+    quarterfinal_matches = [
+        ("LNG", "WB"),
+        ("HLE", "BLG"),
+        ("TES", "T1"),
+        ("GEN", "FLY")
+    ]
+    print(f"八強比賽列表：{quarterfinal_matches}")
+    (quarter_match_winner,
+     quarter_first_blood,
+     quarter_first_tower) = quarterfinal_predictor(test_data_scaled,
+                                                   model, 
+                                                   quarterfinal_matches,
+                                                   4,
+                                                   "2024-10-17T00:00:00.000Z")
+    print(f"八強比賽預測結果：{quarter_match_winner}")
+    #draw_tournament_hierarchy(quarterfinal_matches, quarter_match_winner, [], "")
 
-semifinal_matches = [
-    (quarter_match_winner[0], quarter_match_winner[1]),
-    (quarter_match_winner[2], quarter_match_winner[3])
-]
-(semi_match_winner,
- semi_first_blood,
- semi_first_tower) = quarterfinal_predictor(test_data_scaled,
-                                            model,
-                                            semifinal_matches,
-                                            2)
-print(f"四強比賽預測結果：{semi_match_winner}")
-#draw_tournament_hierarchy(quarterfinal_matches, quarter_match_winner, semi_match_winner, "")
+    semifinal_matches = [
+        (quarter_match_winner[0], quarter_match_winner[1]),
+        (quarter_match_winner[2], quarter_match_winner[3])
+    ]
+    (semi_match_winner,
+     semi_first_blood,
+     semi_first_tower) = quarterfinal_predictor(test_data_scaled,
+                                                model,
+                                                semifinal_matches,
+                                                7,
+                                                "2024-10-26T00:00:00.000Z")
+    print(f"四強比賽預測結果：{semi_match_winner}")
+    #draw_tournament_hierarchy(quarterfinal_matches, quarter_match_winner, semi_match_winner, "")
 
-final_matches = [
-    (semi_match_winner[0], semi_match_winner[1])
-]
-(final_match_winner,
- final_first_blood,
- final_first_tower) = quarterfinal_predictor(test_data_scaled,
-                                             model,
-                                             final_matches,
-                                             1)
-print(f"冠軍：{final_match_winner[0]}")
-draw_tournament_hierarchy(quarterfinal_matches, quarter_match_winner, semi_match_winner, final_match_winner[0])
+    final_matches = [
+        (semi_match_winner[0], semi_match_winner[1])
+    ]
+    (final_match_winner,
+     final_first_blood,
+     final_first_tower) = quarterfinal_predictor(test_data_scaled,
+                                                 model,
+                                                 final_matches,
+                                                 10,
+                                                 "2024-11-02T00:00:00.000Z")
+    print(f"冠軍：{final_match_winner[0]}")
+    draw_tournament_hierarchy(quarterfinal_matches, quarter_match_winner,
+                              semi_match_winner, final_match_winner[0], "LOL Worlds 2024")
+
+def worlds_2023():
+    # 定義八強比賽列表
+    quarterfinal_matches = [
+        ("GEN", "BLG"),
+        ("NRG", "WB"),
+        ("JDG", "KT"),
+        ("LNG", "T1")
+    ]
+    print(f"八強比賽列表：{quarterfinal_matches}")
+    (quarter_match_winner,
+     quarter_first_blood,
+     quarter_first_tower) = quarterfinal_predictor(test_data_scaled,
+                                                   model, 
+                                                   quarterfinal_matches,
+                                                   4,
+                                                   "2023-11-02T00:00:00.000Z")
+    print(f"八強比賽預測結果：{quarter_match_winner}")
+    #draw_tournament_hierarchy(quarterfinal_matches, quarter_match_winner, [], "")
+
+    semifinal_matches = [
+        (quarter_match_winner[0], quarter_match_winner[1]),
+        (quarter_match_winner[2], quarter_match_winner[3])
+    ]
+    (semi_match_winner,
+     semi_first_blood,
+     semi_first_tower) = quarterfinal_predictor(test_data_scaled,
+                                                model,
+                                                semifinal_matches,
+                                                7,
+                                                "2023-11-11T00:00:00.000Z")
+    print(f"四強比賽預測結果：{semi_match_winner}")
+    #draw_tournament_hierarchy(quarterfinal_matches, quarter_match_winner, semi_match_winner, "")
+
+    final_matches = [
+        (semi_match_winner[0], semi_match_winner[1])
+    ]
+    (final_match_winner,
+     final_first_blood,
+     final_first_tower) = quarterfinal_predictor(test_data_scaled,
+                                                 model,
+                                                 final_matches,
+                                                 10,
+                                                 "2023-11-19T00:00:00.000Z")
+    print(f"冠軍：{final_match_winner[0]}")
+    draw_tournament_hierarchy(quarterfinal_matches, quarter_match_winner,
+                              semi_match_winner, final_match_winner[0], "LOL Worlds 2023")
+
+worlds_2024()
+worlds_2023()

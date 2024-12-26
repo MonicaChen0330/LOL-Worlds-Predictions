@@ -153,7 +153,7 @@ def predictor(test_data, model):
 
     return roc_auc_scores, accuracy_scores
 
-def quarterfinal_predictor(test_data, model, quarterfinal_matches, history_match):
+def quarterfinal_predictor(test_data, model, quarterfinal_matches, history_match, compete_date):
     team_data = convert_to_teamdata(test_data)
     team_data = team_data.loc[:, ~team_data.columns.duplicated()]
 
@@ -165,10 +165,10 @@ def quarterfinal_predictor(test_data, model, quarterfinal_matches, history_match
 
     for A_teamname, B_teamname in quarterfinal_matches:
         print(f"Processing match between {A_teamname} and {B_teamname}")
-        game_date = test_data["game_date"].max()  # 使用最新日期的數據
+        compete_date = pd.to_datetime(compete_date)
 
-        team_1_game_data = find_most_recent_games(team_data, A_teamname, history_match, compete_date=game_date)
-        team_2_game_data = find_most_recent_games(team_data, B_teamname, history_match, compete_date=game_date)
+        team_1_game_data = find_most_recent_games(team_data, A_teamname, history_match, compete_date=compete_date)
+        team_2_game_data = find_most_recent_games(team_data, B_teamname, history_match, compete_date=compete_date)
 
         if team_1_game_data.empty or team_2_game_data.empty:
             print(f"Skipping match due to insufficient data for teams {A_teamname} and {B_teamname}")

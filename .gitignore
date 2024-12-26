@@ -1,4 +1,7 @@
 train_lol_cleaned.csv
 test_lol_cleaned.csv
+train_lol_selected.csv
+test_lol_selected.csv
+*.png
 results.csv
 __pycache__/
