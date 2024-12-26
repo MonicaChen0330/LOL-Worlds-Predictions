@@ -19,36 +19,32 @@ test_file_path = 'test_lol_cleaned.csv'
 
 train_data = pd.read_csv(train_file_path)
 test_data = pd.read_csv(test_file_path)
-train_data = train_data.drop(columns=["A_firstInhibitorKill", "B_firstInhibitorKill"])
-test_data = test_data.drop(columns=["A_firstInhibitorKill", "B_firstInhibitorKill"])
 
-# 8
-# Drop relevancy less than 0.002
-least_relevancy_feature = ['top_totalHeal', 'sup_sight', 'sup_totalHeal', 'adc_sight', 'mid_sight',
-                            'mid_largestMultiKill', 'top_sight', 'jun_totalHeal', 'adc_totalHeal',
-                            'jun_largestKillingSpree', 'top_largestMultiKill', 'mid_totalHeal',
-                            'elder_dragon_kills', 'sup_kills', 'jun_largestMultiKill', 'herald_kills',
-                            'sup_largestKillingSpree', 'sup_largestMultiKill']
-for side in ["A", "B"]:
-    for feat in least_relevancy_feature:
-        column_name = f"{side}_{feat}"
-        if column_name in train_data.columns:
-            train_data.drop(columns=[column_name], inplace=True)
-        if column_name in test_data.columns:
-            test_data.drop(columns=[column_name], inplace=True)
-# 9
-# Delete voidgrub and outlier and opScore
-train_data.drop(columns=["A_voidgrubs", "B_voidgrubs"], inplace=True)
-test_data.drop(columns=["A_voidgrubs", "B_voidgrubs"], inplace=True)
-remove_feature = ['totalTimeCrowdControlDealt', 'opScore']
-for side in ["A", "B"]:
-    for player in ["top", "mid", "adc", "sup", "jun"]:
-        for feat in remove_feature:
-            column_name = f"{side}_{player}_{feat}"
-            if column_name in train_data.columns:
-                train_data.drop(columns=[column_name], inplace=True)
-            if column_name in test_data.columns:
-                test_data.drop(columns=[column_name], inplace=True)
+# # 8
+# # Drop relevancy less than 0.002
+# least_relevancy_feature =  ['top_totalHeal', 'sup_totalHeal', 'adc_sight', 'mid_sight',
+#                             'mid_largestMultiKill', 'top_sight', 'jun_totalHeal', 'adc_totalHeal',
+#                             'jun_largestKillingSpree', 'top_largestMultiKill', 'mid_totalHeal',
+#                             'sup_kills', 'jun_largestMultiKill',
+#                             'sup_largestKillingSpree', 'sup_largestMultiKill']
+# for side in ["A", "B"]:
+#     for feat in least_relevancy_feature:
+#         column_name = f"{side}_{feat}"
+#         if column_name in train_data.columns:
+#             train_data.drop(columns=[column_name], inplace=True)
+#         if column_name in test_data.columns:
+#             test_data.drop(columns=[column_name], inplace=True)
+# # 9
+# # Delete outlier and opScore
+# remove_feature = ['opScore']
+# for side in ["A", "B"]:
+#     for player in ["top", "mid", "adc", "sup", "jun"]:
+#         for feat in remove_feature:
+#             column_name = f"{side}_{player}_{feat}"
+#             if column_name in train_data.columns:
+#                 train_data.drop(columns=[column_name], inplace=True)
+#             if column_name in test_data.columns:
+#                 test_data.drop(columns=[column_name], inplace=True)
 
 target_list = ['A_wins', "A_firstTowerKill", "A_firstBlood",
                 'B_firstTowerKill', "B_firstBlood"]
@@ -156,17 +152,18 @@ for epoch in range(epochs):
 
 # 測試模型
 model.eval()
-'''with torch.no_grad():
-    wins, firstInhibitor, firstTower = model(X_test_tensor)
-    A_firstInhibitorKill = (firstInhibitor > 0.5).float()
-    A_firstTowerKill = (firstTower > 0.5).float()
-    B_firstInhibitorKill = 1 - A_firstInhibitorKill
+with torch.no_grad():
+    wins, firstBlood, firstTower = model(X_test_tensor)
+    A_wins = wins
+    A_firstBloodKill = firstBlood
+    A_firstTowerKill = firstTower
+    B_firstBloodKill = 1 - A_firstBloodKill
     B_firstTowerKill = 1 - A_firstTowerKill
 
     predictions = {
-        "A_wins": (wins > 0.5).float(),
-        "A_firstInhibitorKill": A_firstInhibitorKill,
-        "B_firstInhibitorKill": B_firstInhibitorKill,
+        "A_wins": A_wins,
+        "A_firstBlood": A_firstBloodKill,
+        "B_firstBlood": B_firstBloodKill,
         "A_firstTowerKill": A_firstTowerKill,
         "B_firstTowerKill": B_firstTowerKill
     }
@@ -185,7 +182,7 @@ model.eval()
         ax.set_title(f'{target} ROC curve')
         ax.legend(loc='best')
     plt.tight_layout()
-    plt.show()'''
+    plt.show()
 
 # 去掉目標欄位，並標準化數據
 X_test_features = test_data.drop(columns=target_list + ["game_date", "A_teamname", "B_teamname"])
@@ -260,7 +257,7 @@ print(f"八強比賽列表：{quarterfinal_matches}")
                                                quarterfinal_matches,
                                                3)
 print(f"八強比賽預測結果：{quarter_match_winner}")
-draw_tournament_hierarchy(quarterfinal_matches, quarter_match_winner, [], "")
+#draw_tournament_hierarchy(quarterfinal_matches, quarter_match_winner, [], "")
 
 semifinal_matches = [
     (quarter_match_winner[0], quarter_match_winner[1]),
@@ -273,7 +270,7 @@ semifinal_matches = [
                                             semifinal_matches,
                                             2)
 print(f"四強比賽預測結果：{semi_match_winner}")
-draw_tournament_hierarchy(quarterfinal_matches, quarter_match_winner, semi_match_winner, "")
+#draw_tournament_hierarchy(quarterfinal_matches, quarter_match_winner, semi_match_winner, "")
 
 final_matches = [
     (semi_match_winner[0], semi_match_winner[1])
