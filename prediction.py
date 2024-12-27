@@ -5,6 +5,7 @@ import torch
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import roc_auc_score, roc_curve
 import matplotlib.pyplot as plt
+import os
 
 def convert_to_teamdata(df):
     general_attr = ["game_date"]
@@ -58,14 +59,14 @@ def produce_match_list(team_data_1, team_data_2):
     match_list.drop(columns=["a_teamname", "b_teamname", "a_game_date", "b_game_date", "a_firstBlood", "b_firstBlood", "a_firstTowerKill", "b_firstTowerKill"], inplace=True)
     return match_list
 
-def predictor(test_data, model):
+def predictor(test_data, model, model_name):
     #print(f"test data: {test_data.shape}")
     team_data = convert_to_teamdata(test_data)
     #print(f"team data: {team_data.shape}")
     team_data = team_data.loc[:, ~team_data.columns.duplicated()]
 
     # 定義目標
-    targets = ["A_wins", "A_firstBloodKill", "A_firstTowerKill"]
+    targets = ["A_wins", "A_firstBlood", "A_firstTowerKill"]
     actual_results = {target: [] for target in targets}
     predicted_results_roc = {target: [] for target in targets}
     predicted_results_acc = {target: [] for target in targets}
@@ -73,7 +74,6 @@ def predictor(test_data, model):
     for _, row in tqdm(test_data.iterrows(), total=len(test_data), desc="Processing CSV file"):
         A_teamname = row["A_teamname"]
         B_teamname = row["B_teamname"]
-        print(f"Processing match between {A_teamname} and {B_teamname}")
 
         team_1_game_data = find_most_recent_games(team_data, A_teamname, 3)
         team_2_game_data = find_most_recent_games(team_data, B_teamname, 3)
@@ -86,24 +86,16 @@ def predictor(test_data, model):
             actual_results[target].append(row[target])
 
         match_list_left = produce_match_list(team_1_game_data, team_2_game_data)
-        #print(f"match list left: {match_list_left.shape}")
         match_list_right = produce_match_list(team_2_game_data, team_1_game_data)
-        #print(f"match list right: {match_list_right.shape}")
 
         X_match_tensor_left = torch.tensor(match_list_left.values, dtype=torch.float32)  # 轉換為 PyTorch 張量
         with torch.no_grad():
             model_outputs = model(X_match_tensor_left)
-            if any(torch.isnan(output).any() for output in model_outputs):
-                print("NaN detected in model outputs!")
-                continue 
             left_wins, left_firstBlood, left_firstTower = model_outputs  # 解包輸出
 
         X_match_tensor_right = torch.tensor(match_list_right.values, dtype=torch.float32)  # 轉換為 PyTorch 張量
         with torch.no_grad():
             model_outputs = model(X_match_tensor_right)
-            if any(torch.isnan(output).any() for output in model_outputs):
-                print("NaN detected in model outputs!")
-                continue 
             right_wins, right_firstBlood, right_firstTower = model_outputs  # 解包輸出
         
         # 整合機率計算
@@ -123,33 +115,31 @@ def predictor(test_data, model):
         y_true = np.array(actual_results[target])
         y_pred_roc = np.array(predicted_results_roc[target])
         y_pred_acc = np.array(predicted_results_acc[target])
-        print(f"{target} true length: {len(y_true)}")
-        print(f"{target} roc pred length: {len(y_pred_roc)}")
-        print(f"{target} acc pred length: {len(y_pred_acc)}")
 
-        '''# 過濾 NaN 值
-        valid_indices = ~np.isnan(y_true) & ~np.isnan(y_pred)
-        y_true = y_true[valid_indices]
-        y_pred = y_pred[valid_indices]
-        print(f"{target} true length After NaN Cheking: {len(y_true)}")
-        print(f"{target} pred length After NaN Cheking: {len(y_pred)}")'''
-
-        # 計算 ROC-AUC
+        # 計算 ROC-AUC 和 Accuracy
         if len(y_true) > 0 and len(y_pred_roc) > 0 and len(y_pred_acc) > 0:  # 確保數據不為空
             roc_auc_scores[target] = roc_auc_score(y_true, y_pred_roc)
             accuracy_scores[target] = accuracy_score(y_true, y_pred_acc)
-            print(f"{target} ROC-AUC: {roc_auc_scores[target]:.4f}")
-            print(f"{target} Accuracy: {accuracy_scores[target]:.4f}")
         else:
-            print(f"{target} 沒有足夠的有效數據計算 ROC-AUC 或 Accuracy")
+            roc_auc_scores[target] = None
+            accuracy_scores[target] = None
 
-    results_df = pd.DataFrame({
-        "Target": targets,
-        "ROC-AUC": [roc_auc_scores.get(target, None) for target in targets],
-        "Accuracy": [accuracy_scores.get(target, None) for target in targets]
-    })
-    results_df.to_csv("results.csv", index=False)
-    print("ROC-AUC 和 Accuracy 已保存至 results.csv")
+    # 保存結果至 CSV
+    results_df = pd.DataFrame([{
+        "Model": model_name,
+        "A_wins_acc": accuracy_scores.get("A_wins", None),
+        "A_firstBlood_acc": accuracy_scores.get("A_firstBlood", None),
+        "A_firstTowerKill_acc": accuracy_scores.get("A_firstTowerKill", None),
+        "A_wins_roc": roc_auc_scores.get("A_wins", None),
+        "A_firstBlood_roc": roc_auc_scores.get("A_firstBlood", None),
+        "A_firstTowerKill_roc": roc_auc_scores.get("A_firstTowerKill", None)
+    }])
+    file_path = "results.csv"
+    if os.path.exists(file_path):
+        results_df.to_csv(file_path, mode='a', header=False, index=False)
+    else:
+        results_df.to_csv(file_path, mode='w', header=True, index=False)
+    print("Results saved to results.csv")
 
     return roc_auc_scores, accuracy_scores
 
