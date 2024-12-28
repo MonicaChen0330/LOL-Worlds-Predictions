@@ -1,5 +1,6 @@
 import pandas as pd
 
+# define different kind of tasks
 player_list = ["top", "mid", "adc", "sup", "jun"]
 team = ["red", "blue"]
 role_task = ["wardsPlaced", "wardsKilled", "sightWardsBought", "goldEarned", 
@@ -8,6 +9,7 @@ role_task = ["wardsPlaced", "wardsKilled", "sightWardsBought", "goldEarned",
 team_task = ["kills", "deaths", "assists", "tower_kills", "inhibitor_kills", "gold_earned"]
 basic = ["game_id", "game_length"]
 
+# load dataset
 lol_train_data = pd.read_csv("./LOL_gamestats_crawler/train.csv")
 lol_test_data = pd.read_csv("./LOL_gamestats_crawler/worlds_test.csv")
 
@@ -19,7 +21,6 @@ step 0
 for b in basic:
     lol_train_data.drop(columns=[b], inplace=True)
     lol_test_data.drop(columns=[b], inplace=True)
-#lol_train_data.drop(columns=["game_date"], inplace=True)
 
 '''
 step 1
