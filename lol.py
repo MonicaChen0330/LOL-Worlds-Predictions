@@ -7,11 +7,11 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import roc_auc_score, roc_curve
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
-from prediction import predictor, quarterfinal_predictor
 import networkx as nx
 import matplotlib.animation as animation
 
 from model import FNN, CNN, ResNetModel
+from prediction import predictor, quarterfinal_predictor
 
 # 讀取訓練與測試數據
 train_file_path = 'train_lol_cleaned.csv'
@@ -20,35 +20,8 @@ test_file_path = 'test_lol_cleaned.csv'
 train_data = pd.read_csv(train_file_path)
 test_data = pd.read_csv(test_file_path)
 
-# # 8
-# # Drop relevancy less than 0.002
-# least_relevancy_feature =  ['top_totalHeal', 'sup_totalHeal', 'adc_sight', 'mid_sight',
-#                             'mid_largestMultiKill', 'top_sight', 'jun_totalHeal', 'adc_totalHeal',
-#                             'jun_largestKillingSpree', 'top_largestMultiKill', 'mid_totalHeal',
-#                             'sup_kills', 'jun_largestMultiKill',
-#                             'sup_largestKillingSpree', 'sup_largestMultiKill']
-# for side in ["A", "B"]:
-#     for feat in least_relevancy_feature:
-#         column_name = f"{side}_{feat}"
-#         if column_name in train_data.columns:
-#             train_data.drop(columns=[column_name], inplace=True)
-#         if column_name in test_data.columns:
-#             test_data.drop(columns=[column_name], inplace=True)
-# # 9
-# # Delete outlier and opScore
-# remove_feature = ['opScore']
-# for side in ["A", "B"]:
-#     for player in ["top", "mid", "adc", "sup", "jun"]:
-#         for feat in remove_feature:
-#             column_name = f"{side}_{player}_{feat}"
-#             if column_name in train_data.columns:
-#                 train_data.drop(columns=[column_name], inplace=True)
-#             if column_name in test_data.columns:
-#                 test_data.drop(columns=[column_name], inplace=True)
-
 target_list = ['A_wins', "A_firstTowerKill", "A_firstBlood",
                 'B_firstTowerKill', "B_firstBlood"]
-#target = ['A_wins']
 
 # 分離特徵與目標變量
 X_train = train_data.drop(columns=target_list)
@@ -152,7 +125,7 @@ for epoch in range(epochs):
 
 # 測試模型
 model.eval()
-'''with torch.no_grad():
+with torch.no_grad():
     wins, firstBlood, firstTower = model(X_test_tensor)
     A_wins = wins
     A_firstBloodKill = firstBlood
@@ -182,7 +155,7 @@ model.eval()
         ax.set_title(f'{target} ROC curve')
         ax.legend(loc='best')
     plt.tight_layout()
-    plt.show()'''
+    plt.show()
 
 # 去掉目標欄位，並標準化數據
 X_test_features = test_data.drop(columns=target_list + ["game_date", "A_teamname", "B_teamname"])
@@ -195,7 +168,7 @@ test_data_scaled[X_test_features.columns] = X_test_scaled[X_test_features.column
 #predictor(test_data_scaled, model, model_name="CNN")
 predictor(test_data_scaled, model, model_name="ResNetModel")
 
-'''# 呼叫 predictor 函數，傳遞完整的測試數據
+# 呼叫 predictor 函數，傳遞完整的測試數據
 def draw_tournament_hierarchy(quarterfinal_matches, quarter_winners,
                               semifinal_winners, final_winner, tournament_name):
     """
@@ -343,4 +316,4 @@ def worlds_2023():
                               semi_match_winner, final_match_winner[0], "LOL Worlds 2023")
 
 worlds_2024()
-worlds_2023()'''
+worlds_2023()

@@ -1,21 +1,30 @@
 # League of Legends Worlds Predictions Project
 
-## Project Workflow
-### Crawler
-1. **GetGameID.py**: Fetch match IDs for the specified league and year.
-2. **GetGameStats.py**: Fetch detailed game statistics for each match.
-3. **MatchStatsToCSV.py**: Clean and process the raw game statistics data into CSV format.
-4. **MergeCSV.py**: Combine multiple CSV files into a single dataset for model training or testing.
+## Overview👁️
+This project aims to predict the outcomes of League of Legends (LoL) World Championship matches using machine learning models. The project consists of two main components: a web crawler to fetch match data and a machine learning model to predict match outcomes.
 
-## Require Dependencies
-Before running the scripts, install the required libraries:
+## Installation🧰
+To run the project, you need to install the required dependencies. You can install them using the following command:
 ```bash
-pip install requests pandas numpy os json time random
+pip install -r requirements.txt
 ```
-Ensure that Python and `pip` are correctly installed and added to your system path.
 
-## How to Run the Project
-### Crawler
+## Project Workflow🔄
+The project consists of two main components: a web crawler to fetch match data and a machine learning model to predict match outcomes. The workflow is as follows:
+1. **Crawler Component**:
+   - **GetGameID.py**: Fetch match IDs for a specified league and year.
+   - **GetGameStats.py**: Fetch detailed game statistics for each match.
+   - **MatchStatsToCSV.py**: Clean and process the raw game statistics data into CSV format.
+   - **MergeCSV.py**: Combine multiple CSV files into a single dataset for model training or testing.
+2. **Machine Learning Model**:
+   - **DataCleaning.py**: Clean and preprocess the raw dataset for training the machine learning model.
+   - **FeatureAnalysis.ipynb**: Analyze the features in the dataset to identify important predictors for the model.
+   - **lol.py**: Train a machine learning model using the cleaned dataset.
+   - **prediction.py**: Define the prediction function to predict match outcomes for future matches.
+
+## Usage🚀
+### Crawler🐞
+The crawler component fetches match data from the Riot Games API. To fetch match data, follow these steps:
 #### **1. Fetch Match IDs** (`GetGameID.py`)
 Fetch all match IDs for a specified league and year.
 ##### **Usage:**
@@ -83,30 +92,91 @@ Combine multiple cleaned CSV files into a single dataset, suitable for training 
    ./Training.csv or ./Testing.csv
    ```
 
-## **Directory Structure**
+### Machine Learning Model🤖
+The machine learning component trains a model to predict match outcomes using the cleaned dataset. The workflow is as follows:
+
+#### 1. Data Cleaning (`DataCleaning.py`)
+Clean and preprocess the raw dataset for training the machine learning model.
+#### **Usage:**
+1. Run the script:
+   ```bash
+   python DataCleaning.py
+   ```
+2. The script will clean the dataset and save the cleaned data in two CSV files:
+   - `train_lol.csv`: Training dataset.
+   - `test_lol.csv`: Testing dataset.
+
+#### 2. Feature Analysis (`FeatureAnalysis.ipynb`)
+Analyze the features in the dataset to identify important predictors for the model.
+#### **Usage:**
+1. Open the Jupyter notebook:
+   ```bash
+   jupyter notebook FeatureAnalysis.ipynb
+   ```
+2. Run the cells in the notebook to analyze the features.
+3. Visualize the feature importance and correlation with the target variable.
+4. Identify the important features for the model.
+5. The notebook will generate the dataset with selected features:
+   - `train_lol_selected.csv`: Training dataset with selected features.
+   - `test_lol_selected.csv`: Testing dataset with selected features.
+
+#### 3. Model Training (`lol.py`, `model.py`)
+Train a machine learning model using the cleaned dataset.
+#### **Usage:**
+1. Run the script:
+   ```bash
+   python lol.py
+   ```
+2. The script will train the model and test it on the testing dataset.
+
+#### 4. Model Prediction (`lol.py`, `prediction.py`)
+Use the trained model to predict match outcomes for future matches.
+#### **Usage:**
+1. Run the script:
+   ```bash
+   python lol.py
+   ```
+2. The script will using the prediction function to predict the outcome of the matches.
+3. The prediction results will be displayed in the console, saved in a CSV file, and plotted in a graph.
+
+## Project Structure📂
 
 ```plaintext
-Project Root/LOL_gamestats_crawler
+Project Root/
 │
-├── GameID/                 # Match ID CSV files
-│   ├── matches_99_2024_all_months.csv
-│   └── ...
+├── LOL_gamestats_crawler
+│   │
+│   ├── GameID/                 # Match ID CSV files
+│   │   ├── matches_99_2024_all_months.csv
+│   │   └── ...
+│   │
+│   ├── MatchStats/             # Raw JSON files of match statistics
+│   │   ├── LCK_2024/
+│   │   ├── LPL_2024/
+│   │   └── ...
+│   │
+│   ├── StatsCSV/               # Cleaned and structured CSV files
+│   │   ├── train/  
+│   │   │    ├── LCK_2024.csv
+│   │   │    ├── LPL_2024.csv
+│   │   │    └── ...
+│   │   ├── test/
+│   │   └── ...
+│   │
+│   ├── GetGameID.py            # Fetch match IDs
+│   ├── GetGameStats.py         # Fetch match statistics
+│   ├── MatchStatsToCSV.py   # Clean match data
+│   ├── MergeCSV.py             # Combine CSV files
+│   └── README.md               # Documentation (this file)
 │
-├── MatchStats/             # Raw JSON files of match statistics
-│   ├── LCK_2024/
-│   ├── LPL_2024/
-│   └── ...
-│
-├── StatsCSV/               # Cleaned and structured CSV files
-│   ├── train/  
-│   │    ├── LCK_2024.csv
-│   │    ├── LPL_2024.csv
-│   │    └── ...
-│   ├── test/
-│   └── ...
-│
-├── GetGameID.py            # Fetch match IDs
-├── GetGameStats.py         # Fetch match statistics
-├── MatchStatsToCSV.py   # Clean match data
-├── MergeCSV.py             # Combine CSV files
-└── README.md               # Documentation (this file)
+├── DataCleaning.py
+├── FeatureAnalysis.ipynb
+├── lol.py
+├── model.py
+├── ModelScorePlot.py
+├── prediction.py
+├── README.md
+├── requirements.txt
+├── train_lol_selected.csv
+└── test_lol_selected.csv
+```
