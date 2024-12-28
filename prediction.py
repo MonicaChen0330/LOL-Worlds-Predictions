@@ -8,9 +8,13 @@ import matplotlib.pyplot as plt
 import os
 
 def convert_to_teamdata(df):
+    """
+    df: dataframe of test_lol_selected.csv
+    傳入所有測試資料，針對測試資料中的每個對戰組合進行A,B隊的數據切分
+    轉換成每列單一隊伍單場數據
+    """
     general_attr = ["game_date"]
     
-    # 這裡如果已經改成a和b的話判斷要做修改
     A_attr = [col for col in df.columns if "A_" in col and col not in ["A_wins"]]
     B_attr = [col for col in df.columns if "B_" in col]
     neutral_attr = [col.replace("B_", "") for col in B_attr]
@@ -21,11 +25,11 @@ def convert_to_teamdata(df):
     A = df[A_attr]
     B = df[B_attr]
 
-    # 將 blue 和 red 的列名統一
+    # 將 Ａ隊 和 Ｂ隊 的列名統一
     A.columns = neutral_attr
     B.columns = neutral_attr
 
-    # 合併 blue 和 red DataFrame
+    # 合併 Ａ隊 和 Ｂ隊 DataFrame
     team_data = pd.concat([A, B], axis=0, ignore_index=True)
     team_data["game_date"] = pd.concat([general["game_date"], general["game_date"]], axis=0, ignore_index=True)
     team_data = team_data.sort_values("game_date", ascending=False)
@@ -34,6 +38,10 @@ def convert_to_teamdata(df):
 
 def find_most_recent_games(df, team_name, n_games, compete_date="2024-10-18T00:00:00.000Z"):
     """
+    df: converted test data
+    team_name: team name
+    n_game: how many recent games to found
+    compete_data: 
     Find the most recent games before compete date for a given team
     """
     if compete_date is not None:
@@ -56,49 +64,54 @@ def produce_match_list(team_data_1, team_data_2):
             match_list.append(match)
 
     match_list = pd.DataFrame(match_list)
+    # drop columns that is not use for training
     match_list.drop(columns=["a_teamname", "b_teamname", "a_game_date", "b_game_date", "a_firstBlood", "b_firstBlood", "a_firstTowerKill", "b_firstTowerKill"], inplace=True)
     return match_list
 
 def predictor(test_data, model, model_name):
-    #print(f"test data: {test_data.shape}")
-    team_data = convert_to_teamdata(test_data)
-    #print(f"team data: {team_data.shape}")
+    """
+    test_data: test_lol_selected's dataframe
+    model: trained model
+    model_name: one of FNN, CNN, RestNetModel
+    """
+    team_data = convert_to_teamdata(test_data) #Convert dataframe 
     team_data = team_data.loc[:, ~team_data.columns.duplicated()]
 
-    # 定義目標
+    # Define Targets
     targets = ["A_wins", "A_firstBlood", "A_firstTowerKill"]
-    actual_results = {target: [] for target in targets}
+    actual_results = {target: [] for target in targets} 
     predicted_results_roc = {target: [] for target in targets}
     predicted_results_acc = {target: [] for target in targets}
 
     for _, row in tqdm(test_data.iterrows(), total=len(test_data), desc="Processing CSV file"):
         A_teamname = row["A_teamname"]
         B_teamname = row["B_teamname"]
+        compete_date = row["game_date"]
 
-        team_1_game_data = find_most_recent_games(team_data, A_teamname, 3)
-        team_2_game_data = find_most_recent_games(team_data, B_teamname, 3)
+        team_1_game_data = find_most_recent_games(team_data, A_teamname, 3, compete_date) #find recent games for A team 
+        team_2_game_data = find_most_recent_games(team_data, B_teamname, 3, compete_date) #find recent games for B team 
 
         if team_1_game_data.empty or team_2_game_data.empty:
             print(f"Skipping match due to insufficient data for teams {A_teamname} and {B_teamname}")
             continue
         
         for target in targets:
-            actual_results[target].append(row[target])
+            actual_results[target].append(row[target]) 
 
-        match_list_left = produce_match_list(team_1_game_data, team_2_game_data)
-        match_list_right = produce_match_list(team_2_game_data, team_1_game_data)
+        match_list_left = produce_match_list(team_1_game_data, team_2_game_data) #Make all possible matches of A vs B
+        match_list_right = produce_match_list(team_2_game_data, team_1_game_data) #Make all possible matches of B vs A
 
         X_match_tensor_left = torch.tensor(match_list_left.values, dtype=torch.float32)  # 轉換為 PyTorch 張量
         with torch.no_grad():
             model_outputs = model(X_match_tensor_left)
-            left_wins, left_firstBlood, left_firstTower = model_outputs  # 解包輸出
+            left_wins, left_firstBlood, left_firstTower = model_outputs 
 
         X_match_tensor_right = torch.tensor(match_list_right.values, dtype=torch.float32)  # 轉換為 PyTorch 張量
         with torch.no_grad():
             model_outputs = model(X_match_tensor_right)
-            right_wins, right_firstBlood, right_firstTower = model_outputs  # 解包輸出
+            right_wins, right_firstBlood, right_firstTower = model_outputs
         
-        # 整合機率計算
+        # Combine two kinds of matches's final probability
         votes = {
             "A_wins": (left_wins.mean().item() + (1 - right_wins.mean().item())) / 2,
             "A_firstBlood": (left_firstBlood.mean().item() + (1 - right_firstBlood.mean().item())) / 2,
@@ -107,7 +120,7 @@ def predictor(test_data, model, model_name):
 
         for target, vote_value in votes.items():
             predicted_results_roc[target].append(vote_value)
-            predicted_results_acc[target].append(1 if vote_value > 0.5 else 0)  # 轉換為二元預測結果
+            predicted_results_acc[target].append(1 if vote_value > 0.5 else 0)  # convert probability > 50% to interger
 
     roc_auc_scores = {}
     accuracy_scores = {}
@@ -116,7 +129,7 @@ def predictor(test_data, model, model_name):
         y_pred_roc = np.array(predicted_results_roc[target])
         y_pred_acc = np.array(predicted_results_acc[target])
 
-        # 計算 ROC-AUC 和 Accuracy
+        # Calculate ROC-AUC and Accuracy
         if len(y_true) > 0 and len(y_pred_roc) > 0 and len(y_pred_acc) > 0:  # 確保數據不為空
             roc_auc_scores[target] = roc_auc_score(y_true, y_pred_roc)
             accuracy_scores[target] = accuracy_score(y_true, y_pred_acc)
@@ -124,7 +137,7 @@ def predictor(test_data, model, model_name):
             roc_auc_scores[target] = None
             accuracy_scores[target] = None
 
-    # 保存結果至 CSV
+    # Save results to CSV
     results_df = pd.DataFrame([{
         "Model": model_name,
         "A_wins_acc": accuracy_scores.get("A_wins", None),
