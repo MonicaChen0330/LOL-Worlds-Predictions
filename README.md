@@ -129,6 +129,9 @@ Train a machine learning model using the cleaned dataset.
    ```
 2. The script will train the model and test it on the testing dataset.
 
+#### **Notice:**
+- You can change the model by referring to the `model.py` file.
+
 #### 4. Model Prediction (`lol.py`, `prediction.py`)
 Use the trained model to predict match outcomes for future matches.
 #### **Usage:**
