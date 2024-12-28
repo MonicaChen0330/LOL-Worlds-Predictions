@@ -154,7 +154,7 @@ This script generates bar charts comparing the scores for three prediction targe
 2. The script will read the `results.csv` file and generate the plots.
 3. The bar charts will be saved as two PNG files::
    - `accuracy_comparison.png`: Shows the **Accuracy Score** of the three models' performance on the test data.
-   - `roc_auc_compsrison.png: Shows the **ROC-AUC** Score of the three models' performance on the test data.
+   - `roc_auc_compsrison.png`: Shows the **ROC-AUC** Score of the three models' performance on the test data.
 
 ## Project Structure📂
 
