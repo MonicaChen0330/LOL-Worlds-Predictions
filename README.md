@@ -21,6 +21,7 @@ The project consists of two main components: a web crawler to fetch match data a
    - **FeatureAnalysis.ipynb**: Analyze the features in the dataset to identify important predictors for the model.
    - **lol.py**: Train a machine learning model using the cleaned dataset.
    - **prediction.py**: Define the prediction function to predict match outcomes for future matches.
+   - **model.py**: Provide three kinds of models for training and prediction.
 
 ## Usage🚀
 ### Crawler🐞
