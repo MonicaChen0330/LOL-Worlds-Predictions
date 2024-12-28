@@ -104,8 +104,8 @@ Clean and preprocess the raw dataset for training the machine learning model.
    python DataCleaning.py
    ```
 2. The script will clean the dataset and save the cleaned data in two CSV files:
-   - `train_lol.csv`: Training dataset.
-   - `test_lol.csv`: Testing dataset.
+   - `train_lol_cleaned.csv`: Training dataset.
+   - `test_lol_cleaned.csv`: Testing dataset.
 
 #### 2. Feature Analysis (`FeatureAnalysis.ipynb`)
 Analyze the features in the dataset to identify important predictors for the model.
@@ -128,7 +128,7 @@ Train a machine learning model using the cleaned dataset.
    ```bash
    python lol.py
    ```
-2. The script will train the model and test it on the testing dataset.
+2. The script will train the model and test it on the testing dataset by calling the predictor in `prediction.py`.
 
 #### **Notice:**
 - You can change the model by referring to the `model.py` file.
@@ -141,7 +141,20 @@ Use the trained model to predict match outcomes for future matches.
    python lol.py
    ```
 2. The script will using the prediction function to predict the outcome of the matches.
-3. The prediction results will be displayed in the console, saved in a CSV file, and plotted in a graph.
+3. The prediction results will be displayed in the console, saved in a CSV file:
+   - `results.csv`: Accuracy Score and ROC-AUC Score of the model performance on the test data.
+  
+#### 5. Plotting Prediction Results (`ModelScorePlot.py`)
+This script generates bar charts comparing the scores for three prediction targets: `Wins`, `FirstKill`, and `FirstTower`
+#### **Usage:**
+1. Run the script:
+   ```bash
+   python ModelScorePlot.py
+   ```
+2. The script will read the `results.csv` file and generate the plots.
+3. The bar charts will be saved as two PNG files::
+   - `accuracy_comparison.png`: Shows the **Accuracy Score** of the three models' performance on the test data.
+   - `roc_auc_compsrison.png: Shows the **ROC-AUC** Score of the three models' performance on the test data.
 
 ## Project Structure📂
 
