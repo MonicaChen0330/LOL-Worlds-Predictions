@@ -1,8 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torchviz import make_dot
-from torchview import draw_graph
 
 class BaseModel(nn.Module):
     def __init__(self):
@@ -129,29 +127,3 @@ class ResNetModel(BaseModel):
         firstInhibitor = self.sigmoid(self.output_firstInhibitorKill(x))
         firstTower = self.sigmoid(self.output_firstTowerKill(x))
         return wins, firstInhibitor, firstTower
-    
-
-# 創建模型實例
-input_size = 148  # 假設輸入特徵的維度是 148
-num_blocks = 3  # 假設 ResNet 模塊的數量是 3
-model = ResNetModel(input_size, num_blocks)
-model_1 = FNN(input_size)
-model_2 = CNN(input_size)
-
-# 創建一個隨機輸入張量
-x = torch.randn(1, input_size)
-
-# 獲取模型的計算圖
-y = model(x)
-y_1 = model_1(x)
-y_2 = model_2(x)
-
-model_graph = draw_graph(model, x)
-model_1_graph = draw_graph(model_1, x)
-model_2_graph = draw_graph(model_2, x)
-
-model_graph.visual_graph.render('ResNet', format='png')
-
-model_1_graph.visual_graph.render('FNN', format='png')
-
-model_2_graph.visual_graph.render('CNN', format='png')
