@@ -2,6 +2,7 @@
 
 ## Overview👁️
 This project aims to predict the outcomes of League of Legends (LoL) World Championship matches using machine learning models. The project consists of two main components: a web crawler to fetch match data and a machine learning model to predict match outcomes.
+### Presentation Video: https://youtu.be/w6eNtfUZiEg
 
 ## Installation🧰
 To run the project, you need to install the required dependencies. You can install them using the following command:
@@ -182,7 +183,7 @@ Project Root/
 │   │
 │   ├── GetGameID.py            # Fetch match IDs
 │   ├── GetGameStats.py         # Fetch match statistics
-│   ├── MatchStatsToCSV.py   # Clean match data
+│   ├── MatchStatsToCSV.py      # Clean match data
 │   ├── MergeCSV.py             # Combine CSV files
 │   └── README.md               # Documentation (this file)
 │
