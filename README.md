@@ -2,7 +2,7 @@
 
 ## Overview👁️
 This project aims to predict the outcomes of League of Legends (LoL) World Championship matches using machine learning models. The project consists of two main components: a web crawler to fetch match data and a machine learning model to predict match outcomes.
-### Presentation Video: https://youtu.be/w6eNtfUZiEg
+#### [Presentation Video](https://youtu.be/w6eNtfUZiEg?si=7gGxABAfveIYlrXr)
 
 ## Installation🧰
 To run the project, you need to install the required dependencies. You can install them using the following command:
